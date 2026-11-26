@@ -310,39 +310,38 @@
 
       const pacote = {
         geral: baseDados.geral,
-        cat: baseDados.cat
+        categorias: baseDados.cat
       };
 
-      const pedeTempo = /mês|mes|mensal|ano|anual|evolu|cresc|queda|tend|hist|resum|últim|ultim|2024|2025|2026/.test(q);
+      const pedeTempo = /mês|mes|mensal|ano|anual|evolu|cresc|queda|tend|hist|resum|últim|ultim|janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|2024|2025|2026/.test(q);
       const pedeProduto = /prod|margem|lucro|custo|rentab|preju|perco|pior|melhor|suplement|grão|grao|óleo|oleo|creatina|whey/.test(q);
       const pedeRegiao = /regi|estado|uf|rj|sp|mg|es|sudeste|rio|paulo|minas|espírito|espirito/.test(q);
       const pedeCliente = /client|comprador|conta|top|carteira|reten|churn/.test(q);
 
       if (pedeTempo || (!pedeProduto && !pedeRegiao && !pedeCliente)) {
-        pacote.ano = baseDados.ano;
-        pacote.mes_ultimos_8 = baseDados.mes.slice(-8);
-        pacote.cat_3m = baseDados.cat_3m;
+        pacote.por_ano = baseDados.ano;
+        pacote.ultimos_8_meses = baseDados.mes.slice(-8);
+        pacote.categorias_ultimos_3_meses = baseDados.cat_3m;
       }
 
       if (pedeProduto || (!pedeTempo && !pedeRegiao && !pedeCliente)) {
-        pacote.prod = baseDados.prod;
+        pacote.produtos = baseDados.prod;
       }
 
       if (pedeRegiao) {
-        pacote.reg = baseDados.reg;
-        pacote.reg_3m = baseDados.reg_3m;
+        pacote.por_estado = baseDados.reg;
+        pacote.estados_ultimos_3_meses = baseDados.reg_3m;
       }
 
-      // Sempre verifica se algum cliente específico foi citado pelo nome
-      const citados = baseDados.cli.filter(c => q.includes(c.CLIENTE.toLowerCase()));
+      const citados = baseDados.cli.filter(c => q.includes(c.cliente.toLowerCase()));
 
       if (pedeCliente || citados.length > 0) {
         const top12 = baseDados.cli.slice(0, 12);
-        const topCrescimento = [...baseDados.cli].sort((a, b) => b.delta_3m - a.delta_3m).slice(0, 8);
-        const topQueda = [...baseDados.cli].sort((a, b) => a.delta_3m - b.delta_3m).slice(0, 6);
+        const topCrescimento = [...baseDados.cli].sort((a, b) => b.crescimento_ultimos_3_meses - a.crescimento_ultimos_3_meses).slice(0, 8);
+        const topQueda = [...baseDados.cli].sort((a, b) => a.crescimento_ultimos_3_meses - b.crescimento_ultimos_3_meses).slice(0, 6);
 
         const mapaCli = new Map();
-        [...citados, ...top12, ...topCrescimento, ...topQueda].forEach(c => mapaCli.set(c.CLIENTE, c));
+        [...citados, ...top12, ...topCrescimento, ...topQueda].forEach(c => mapaCli.set(c.cliente, c));
         pacote.clientes = Array.from(mapaCli.values());
       }
 
@@ -354,17 +353,15 @@
 
       const contextoEnxuto = selecionarContextoInteligente(pergunta);
 
-      const instrucaoSistema = `Você é um Analista Sênior de BI integrado ao dashboard executivo de vendas.
-Legenda dos campos JSON: ped=pedidos, qtd=quantidade, rec=receita(R$), cst=custo(R$), luc=lucro(R$), mg=margem(%), var_rec_pct=variação receita MoM(%), var_mg_pp=variação margem(p.p.), gap_mg_pp=diferença vs margem média geral(${baseDados.geral.mg}%), delta_3m=variação receita últimos 3m vs 3m anteriores(R$).
+      const instrucaoSistema = `Você é o copiloto estratégico de vendas integrado a este dashboard executivo. Converse de forma natural, analítica e direta com o gestor — como um especialista da equipe sentado ao lado dele.
 
-Regras estritas:
-1. Baseie-se EXCLUSIVAMENTE nos números do JSON. Nunca invente ou estime valores fora da base.
-2. Seja executivo, direto e conciso (máximo 5 bullet points curtos + 1 frase de conclusão/ação).
-3. Destaque nomes e números principais em **negrito** (ex: **R$ 125.430,00** e **34,2%**).
-4. Sempre contextualize margens comparando com a média geral da empresa (**${baseDados.geral.mg}%**).
-5. Se pedir "Resumir o mês" sem especificar qual, analise o último mês da série (**${baseDados.geral.ultimo_mes}**) usando os campos pré-calculados var_rec_pct e var_mg_pp.`;
+Regras de comportamento e estilo:
+1. NUNCA comece com apresentações robóticas ("Como Analista de BI...", "Com base nos dados fornecidos..."). Vá direto à resposta.
+2. NUNCA cite nomes de chaves do JSON (como "delta_3m", "var_rec_pct", "margem_pct"), siglas técnicas em inglês ("MoM", "YoY") ou datas em formato código ("2026-12"). Escreva sempre em português natural ("em relação ao mês anterior", "dezembro de 2026", "nos últimos três meses").
+3. Varie a estrutura conforme a pergunta: use parágrafos curtos e fluidos quando for uma explicação ou fechamento de mês; use bullet points apenas quando estiver listando rankings (produtos ou clientes). Não force um bloco fixo de "Ação Recomendada" no fim de toda resposta — só sugira um próximo passo quando houver um alerta real nos números.
+4. Destaque em **negrito** apenas os nomes-chave e valores principais (ex: **R$ 4,34 milhões** ou **R$ 179.243,10** e **32,4%**).
+5. Use exclusivamente os números do JSON. A margem média geral da empresa é **${baseDados.geral.margem_media_geral_pct}%** e o mês mais recente da base é **${baseDados.geral.ultimo_mes_disponivel}**.`;
 
-      // Janela deslizante: mantém apenas as últimas 3 trocas sem reenviar JSONs antigos
       const janelaHistorico = historicoConversa.slice(-6);
       const contents = [
         ...janelaHistorico,
@@ -389,7 +386,6 @@ Regras estritas:
         throw new Error(data.error?.message || 'Erro de comunicação com o servidor de IA.');
       }
 
-      // Salva no histórico apenas a pergunta limpa e a resposta (economiza milhares de tokens nas próximas perguntas)
       historicoConversa.push({ role: 'user', parts: [{ text: pergunta }] });
       historicoConversa.push({ role: 'model', parts: [{ text: data.texto }] });
 
