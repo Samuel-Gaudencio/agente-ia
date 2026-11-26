@@ -1,590 +1,546 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Assistente de Análise</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistente de Análise BI</title>
   <style>
-    :root {
-      --bg-card: #0b1324;
-      --bg-panel: #111b33;
-      --bg-msg-ai: #14203b;
-      --bg-msg-user: #102a56;
-      --border-color: #1f335c;
-      --border-user: #2554a3;
-      --accent: #3b82f6;
-      --accent-hover: #2563eb;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --danger-bg: #2d141c;
-      --danger-border: #7f1d1d;
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      background-color: transparent;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: var(--text-main);
-      overflow: hidden;
-    }
-
-    .widget-container {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(180deg, #0b1324 0%, #09101f 100%);
-      border: 1px solid var(--border-color);
-      border-radius: 12px;
+    body {
+      margin: 0;
+      padding: 12px;
+      background-color: #041836;
+      color: #e6e9ef;
       display: flex;
       flex-direction: column;
+      height: 100vh;
       overflow: hidden;
     }
 
     .header {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border-color);
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
       flex-shrink: 0;
     }
 
-    .header-left {
+    .title {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
+      color: #63a4e6;
+      font-size: 13.5px;
       font-weight: 600;
-      font-size: 14px;
-      color: var(--text-main);
     }
 
-    .sparkle-icon { color: #60a5fa; font-size: 15px; }
+    .title svg {
+      width: 15px;
+      height: 15px;
+      fill: #63a4e6;
+      flex-shrink: 0;
+    }
 
-    .header-right {
+    .header-meta {
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 11px;
-      color: var(--text-muted);
+      gap: 6px;
     }
 
-    .btn-reset {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border-color);
-      color: var(--text-muted);
+    .badge-update {
+      font-size: 10px;
+      color: #7c98b6;
+    }
+
+    .icon-btn {
+      background: #101417;
+      border: 1px solid #233b56;
+      color: #63a4e6;
       border-radius: 6px;
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      padding: 3px 7px;
+      font-size: 11px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: border-color 0.15s;
     }
 
-    .btn-reset:hover {
-      background: rgba(59, 130, 246, 0.15);
-      color: var(--text-main);
-      border-color: var(--accent);
-    }
+    .icon-btn:hover { border-color: #63a4e6; }
 
-    .chat-area {
+    .scroll-area {
       flex: 1;
       overflow-y: auto;
-      padding: 14px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      scroll-behavior: smooth;
+      gap: 9px;
+      padding-right: 3px;
     }
 
-    .chat-area::-webkit-scrollbar { width: 5px; }
-    .chat-area::-webkit-scrollbar-track { background: transparent; }
-    .chat-area::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    .scroll-area::-webkit-scrollbar { width: 4px; }
+    .scroll-area::-webkit-scrollbar-thumb { background: #1d3b5e; border-radius: 4px; }
 
-    .msg-bubble {
-      padding: 12px 14px;
-      border-radius: 10px;
-      font-size: 12.5px;
-      line-height: 1.55;
-      word-wrap: break-word;
-    }
-
-    .msg-ai {
-      background-color: var(--bg-msg-ai);
-      border: 1px solid var(--border-color);
-      color: #e2e8f0;
-      align-self: stretch;
-    }
-
-    .msg-user {
-      background-color: var(--bg-msg-user);
-      border: 1px solid var(--border-user);
-      color: #ffffff;
-      align-self: flex-end;
-      max-width: 85%;
-    }
-
-    .msg-error {
-      background-color: var(--danger-bg);
-      border: 1px solid var(--danger-border);
-      color: #fecaca;
-    }
-
-    .msg-ai p { margin-bottom: 8px; }
-    .msg-ai p:last-child { margin-bottom: 0; }
-    .msg-ai ul, .msg-ai ol { margin: 6px 0 8px 18px; }
-    .msg-ai li { margin-bottom: 4px; }
-    .msg-ai strong { color: #ffffff; font-weight: 600; }
-
-    .suggestions-box {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
+    .section-label {
+      color: #5b9bd5;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
       margin-top: 2px;
     }
 
-    .suggestions-label {
-      font-size: 11.5px;
-      color: var(--text-muted);
-      margin-bottom: 2px;
+    .card-insight {
+      background-color: #111417;
+      border: 1px solid #1c2836;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.48;
+      color: #e2e6ec;
     }
 
-    .suggestion-chip {
+    .card-insight.muted { color: #9fb0c2; }
+
+    .card-insight p {
+      margin: 0 0 6px 0;
+    }
+
+    .card-insight p:last-child {
+      margin-bottom: 0;
+    }
+
+    .card-insight ul {
+      margin: 4px 0;
+      padding-left: 16px;
+    }
+
+    .card-insight li {
+      margin-bottom: 4px;
+    }
+
+    .card-user {
+      background-color: #0b2952;
+      border: 1px solid #2b5482;
+      border-radius: 8px;
+      padding: 8px 11px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #ffffff;
+      align-self: flex-end;
+      max-width: 90%;
+    }
+
+    .suggestions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .suggestion-btn {
       width: 100%;
       text-align: left;
-      background-color: rgba(17, 27, 51, 0.85);
-      border: 1px solid var(--border-color);
-      color: #cbd5e1;
-      padding: 9px 12px;
+      background-color: #111417;
+      border: 1px solid #3c6997;
       border-radius: 8px;
+      padding: 7px 11px;
+      color: #63a4e6;
       font-size: 12px;
+      font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.15s;
     }
 
-    .suggestion-chip:hover {
-      background-color: rgba(30, 58, 138, 0.45);
-      border-color: var(--accent);
-      color: #ffffff;
+    .suggestion-btn:hover { background-color: #18222d; border-color: #63a4e6; }
+    .suggestion-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .typing-dots::after {
+      content: '...';
+      animation: dots 1.2s steps(3, end) infinite;
     }
 
-    .typing {
-      display: inline-flex;
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+
+    .input-box {
+      margin-top: 8px;
+      background-color: #111417;
+      border: 1px solid #3c6997;
+      border-radius: 8px;
+      padding: 7px 10px;
+      display: flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 2px;
-    }
-
-    .typing span {
-      width: 6px;
-      height: 6px;
-      background-color: #60a5fa;
-      border-radius: 50%;
-      animation: bounce 1.3s infinite ease-in-out both;
-    }
-
-    .typing span:nth-child(1) { animation-delay: -0.32s; }
-    .typing span:nth-child(2) { animation-delay: -0.16s; }
-
-    @keyframes bounce {
-      0%, 80%, 100% { transform: scale(0); opacity: 0.4; }
-      40% { transform: scale(1); opacity: 1; }
-    }
-
-    .input-footer {
-      padding: 12px 14px;
-      border-top: 1px solid var(--border-color);
-      background-color: #09101f;
+      gap: 8px;
       flex-shrink: 0;
     }
 
-    .input-wrapper {
-      display: flex;
-      align-items: center;
-      background-color: var(--bg-panel);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 4px 6px 4px 12px;
-      transition: border-color 0.2s;
-    }
-
-    .input-wrapper:focus-within { border-color: var(--accent); }
-
-    .input-wrapper input {
+    .input-box textarea {
       flex: 1;
       background: transparent;
       border: none;
+      color: #e6e9ef;
+      font-size: 12px;
+      line-height: 1.35;
+      resize: none;
+      height: 32px;
       outline: none;
-      color: var(--text-main);
-      font-size: 12.5px;
-      padding: 6px 0;
+      padding: 0;
     }
 
-    .input-wrapper input::placeholder { color: #64748b; }
+    .input-box textarea::placeholder { color: #8a8f98; }
 
-    .btn-send {
+    .send-btn {
       background: transparent;
       border: none;
-      color: #60a5fa;
-      width: 30px;
-      height: 30px;
-      border-radius: 6px;
+      padding: 4px;
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
     }
 
-    .btn-send:hover:not(:disabled) {
-      background-color: rgba(59, 130, 246, 0.15);
-      color: #93c5fd;
+    .send-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: #5b9bd5;
+      fill: none;
+      stroke-width: 1.8;
     }
 
-    .btn-send:disabled { opacity: 0.4; cursor: not-allowed; }
+    .send-btn:disabled svg { stroke: #4c5663; cursor: not-allowed; }
   </style>
 </head>
 <body>
-  <div class="widget-container">
-    <div class="header">
-      <div class="header-left">
-        <span class="sparkle-icon">✦</span>
-        <span>Assistente de análise</span>
-      </div>
-      <div class="header-right">
-        <span id="data-atualizacao">Carregando...</span>
-        <button class="btn-reset" id="btn-reset" title="Reiniciar conversa">↻</button>
-      </div>
-    </div>
 
-    <div class="chat-area" id="chat-area">
-      <div class="msg-bubble msg-ai" id="insight-inicial">
-        Carregando base de dados...
-      </div>
-
-      <div class="suggestions-box" id="suggestions-box">
-        <div class="suggestions-label">Sugestões rápidas</div>
-        <button class="suggestion-chip" data-q="Resuma o desempenho do último mês disponível, destacando faturamento, pedidos, margem e variações.">Resumir o mês</button>
-        <button class="suggestion-chip" data-q="Onde estou perdendo margem? Aponte as categorias, produtos e estados com menor rentabilidade.">Onde perco margem?</button>
-        <button class="suggestion-chip" data-q="Quais clientes mais crescem e quais têm maior faturamento e margem?">Quais clientes crescem?</button>
-      </div>
+  <div class="header">
+    <div class="title">
+      <svg viewBox="0 0 24 24">
+        <path d="M10 2L11.8 7.2L17 9L11.8 10.8L10 16L8.2 10.8L3 9L8.2 7.2L10 2ZM18 14L19 16.8L21.8 17.8L19 18.8L18 21.6L17 18.8L14.2 17.8L17 16.8L18 14Z"/>
+      </svg>
+      <span>Assistente de análise</span>
     </div>
-
-    <div class="input-footer">
-      <form class="input-wrapper" id="chat-form">
-        <input type="text" id="user-input" placeholder="Pergunte sobre os dados" autocomplete="off" />
-        <button type="submit" class="btn-send" id="btn-send" title="Enviar">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </button>
-      </form>
+    <div class="header-meta">
+      <span class="badge-update" id="badgeUpdate"></span>
+      <button class="icon-btn" onclick="novaConversa()" title="Nova conversa">↻</button>
     </div>
+  </div>
+
+  <div class="scroll-area" id="scrollArea">
+    <div class="section-label">Diagnóstico automático</div>
+    <div class="card-insight" id="insight1">Carregando indicadores...</div>
+    <div class="card-insight muted" id="insight2">Sincronizando base...</div>
+
+    <div class="section-label">Sugestões rápidas</div>
+    <div class="suggestions-list">
+      <button class="suggestion-btn" onclick="usarSugestao(this)">Resumir o mês</button>
+      <button class="suggestion-btn" onclick="usarSugestao(this)">Onde perco margem?</button>
+      <button class="suggestion-btn" onclick="usarSugestao(this)">Quais clientes crescem?</button>
+    </div>
+  </div>
+
+  <div class="input-box">
+    <textarea id="pergunta" placeholder="Pergunte sobre os dados" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); enviar(); }"></textarea>
+    <button class="send-btn" id="btnEnviar" onclick="enviar()" title="Enviar">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
   </div>
 
   <script>
     const WORKER_URL = 'https://woker.smg28341133.workers.dev';
-    const DADOS_URL = './dados_ia.json';
-    const CACHE_KEY = 'cache_dados_ia_v3';
-
     let baseDados = null;
     let historicoConversa = [];
-    let enviando = false;
 
-    const chatArea = document.getElementById('chat-area');
-    const chatForm = document.getElementById('chat-form');
-    const userInput = document.getElementById('user-input');
-    const btnSend = document.getElementById('btn-send');
-    const btnReset = document.getElementById('btn-reset');
-    const insightInicialEl = document.getElementById('insight-inicial');
-    const dataAtualizacaoEl = document.getElementById('data-atualizacao');
-    const suggestionsBox = document.getElementById('suggestions-box');
-
-    function aplicarBaseNaTela(dados) {
-      baseDados = dados;
-      dataAtualizacaoEl.textContent = dados.atualizado_em
-        ? dados.atualizado_em.split(' ')[0]
-        : 'Atualizado';
-      insightInicialEl.innerHTML = formatarMarkdown(
-        dados.insight_inicial || 'Base carregada. Faça sua pergunta abaixo.'
-      );
-    }
-
-    async function carregarBaseDados() {
-      const cacheLocal = localStorage.getItem(CACHE_KEY);
-      if (cacheLocal) {
-        try {
-          aplicarBaseNaTela(JSON.parse(cacheLocal));
-        } catch (e) {}
-      }
-
-      try {
-        const resp = await fetch(`${DADOS_URL}?v=${Date.now()}`);
-        if (!resp.ok) throw new Error('Falha ao carregar dados_ia.json');
-        const dadosNovos = await resp.json();
-        localStorage.setItem(CACHE_KEY, JSON.stringify(dadosNovos));
-        aplicarBaseNaTela(dadosNovos);
-      } catch (err) {
-        if (!baseDados) {
-          insightInicialEl.textContent = 'Erro ao carregar dados_ia.json. Verifique a publicação no GitHub Pages.';
-          insightInicialEl.classList.add('msg-error');
-        }
-      }
-    }
-
-    function formatarMarkdown(texto) {
+    function renderizarMarkdown(texto) {
       let html = texto
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
-      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
       const linhas = html.split('\n');
-      let resultado = [];
       let emLista = false;
+      const saida = [];
 
-      for (let linha of linhas) {
+      for (const linha of linhas) {
         const trim = linha.trim();
-        if (trim.startsWith('- ') || trim.startsWith('* ')) {
+        if (/^[-*•]\s+/.test(trim)) {
           if (!emLista) {
-            resultado.push('<ul>');
+            saida.push('<ul>');
             emLista = true;
           }
-          resultado.push(`<li>${trim.substring(2)}</li>`);
+          saida.push('<li>' + trim.replace(/^[-*•]\s+/, '') + '</li>');
         } else {
           if (emLista) {
-            resultado.push('</ul>');
+            saida.push('</ul>');
             emLista = false;
           }
-          if (trim.length > 0) {
-            resultado.push(`<p>${trim}</p>`);
+          if (trim) {
+            saida.push('<p>' + trim + '</p>');
           }
         }
       }
-      if (emLista) resultado.push('</ul>');
-      return resultado.join('');
+      if (emLista) saida.push('</ul>');
+      return saida.join('');
     }
 
-    function adicionarMensagem(texto, tipo = 'ai') {
-      const div = document.createElement('div');
-      div.className = `msg-bubble ${tipo === 'user' ? 'msg-user' : tipo === 'error' ? 'msg-ai msg-error' : 'msg-ai'}`;
-      div.innerHTML = tipo === 'user' ? texto : formatarMarkdown(texto);
-      chatArea.appendChild(div);
-      chatArea.scrollTop = chatArea.scrollHeight;
-      return div;
-    }
+    async function carregarDados() {
+      const c1 = document.getElementById('insight1');
+      const c2 = document.getElementById('insight2');
+      const dataBadge = document.getElementById('badgeUpdate');
 
-    function mostrarDigitando() {
-      const div = document.createElement('div');
-      div.className = 'msg-bubble msg-ai';
-      div.id = 'typing-indicator';
-      div.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
-      chatArea.appendChild(div);
-      chatArea.scrollTop = chatArea.scrollHeight;
-      return div;
+      try {
+        const resp = await fetch('dados_ia.json?t=' + Date.now());
+        if (!resp.ok) throw new Error('Falha ao carregar dados_ia.json (' + resp.status + ')');
+
+        baseDados = await resp.json();
+
+        if (c1) c1.textContent = baseDados.cards?.c1 || 'Base carregada.';
+        if (c2) c2.textContent = baseDados.cards?.c2 || 'Pronto para análise.';
+        if (dataBadge && baseDados.atualizado_em) {
+          dataBadge.textContent = baseDados.atualizado_em.split(' ')[0];
+        }
+
+        document.getElementById('pergunta').disabled = false;
+        document.getElementById('btnEnviar').disabled = false;
+        document.querySelectorAll('.suggestion-btn').forEach(b => b.disabled = false);
+      } catch (err) {
+        if (c1) c1.textContent = 'Erro ao carregar base: ' + err.message;
+        if (c2) c2.textContent = 'Verifique se dados_ia.json existe no repositório.';
+      }
     }
 
     function selecionarContextoInteligente(pergunta) {
-      if (!baseDados) return {};
-      const q = pergunta.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (!baseDados) return '{}';
+      const q = pergunta.toLowerCase();
 
-      const mesesLista = baseDados.meses || baseDados.mes || [];
-      const anosLista = baseDados.anos || baseDados.ano || [];
-      const cats = baseDados.categorias || baseDados.categoria || [];
-      const prods = baseDados.produtos || baseDados.produto || [];
-      const ufs = baseDados.estados || baseDados.estado || [];
-      const clisTop = baseDados.clientes_top || baseDados.cliente_top || [];
-      const clisCresc = baseDados.clientes_crescimento || baseDados.cliente_crescimento || [];
-      const catsMes = baseDados.categorias_mes || baseDados.cat_mes || [];
-      const prodsMes = baseDados.produtos_mes || baseDados.prod_mes || [];
+      const mesesNomes = ['janeiro', 'fevereiro', 'março', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+      const mesEncontrado = mesesNomes.find(m => q.includes(m));
+      const mesNormalizado = mesEncontrado === 'marco' ? 'março' : mesEncontrado;
+
+      const anoMatch = q.match(/\b(2024|2025|2026)\b/);
+      const anoAlvo = anoMatch ? anoMatch[1] : baseDados.geral.ultimo_mes_disponivel.split('/')[1];
 
       const pacote = {
-        geral: baseDados.geral,
-        anos: anosLista
+        geral: {
+          pedidos: baseDados.geral.total_pedidos,
+          receita: baseDados.geral.receita_total,
+          margem_geral_pct: baseDados.geral.margem_media_geral_pct,
+          ultimo_mes: baseDados.geral.ultimo_mes_disponivel
+        },
+        anos: baseDados.ano,
+        categorias_geral: baseDados.cat.map(c => ({
+          cat: c.categoria,
+          rec: c.receita_formatada,
+          mg: c.margem_pct
+        }))
       };
 
-      const mesesMap = {
-        janeiro: 'Janeiro', jan: 'Janeiro',
-        fevereiro: 'Fevereiro', fev: 'Fevereiro',
-        marco: 'Março', mar: 'Março',
-        abril: 'Abril', abr: 'Abril',
-        maio: 'Maio', mai: 'Maio',
-        junho: 'Junho', jun: 'Junho',
-        julho: 'Julho', jul: 'Julho',
-        agosto: 'Agosto', ago: 'Agosto',
-        setembro: 'Setembro', set: 'Setembro',
-        outubro: 'Outubro', out: 'Outubro',
-        novembro: 'Novembro', nov: 'Novembro',
-        dezembro: 'Dezembro', dez: 'Dezembro'
-      };
+      const pedeTempo = /mês|mes|mensal|ano|anual|evolu|cresc|queda|tend|hist|resum|últim|ultim|2024|2025|2026/.test(q) || !!mesNormalizado;
+      const pedeProduto = /prod|margem|lucro|custo|rentab|preju|perco|pior|melhor|suplement|grão|grao|óleo|oleo|creatina|whey/.test(q);
+      const pedeRegiao = /regi|estado|uf|rj|sp|mg|es|sudeste|rio|paulo|minas|espírito|espirito/.test(q);
+      const pedeCliente = /client|comprador|conta|top|carteira|reten|churn/.test(q);
 
-      let mesNormalizado = null;
-      for (const [chave, valor] of Object.entries(mesesMap)) {
-        if (new RegExp(`\\b${chave}\\b`).test(q)) {
-          mesNormalizado = valor;
-          break;
+      if (pedeTempo || (!pedeProduto && !pedeRegiao && !pedeCliente)) {
+        if (mesNormalizado) {
+          // Filtra apenas o mês específico pedido (ex: novembro/2026) e o mês anterior para comparação
+          const idx = baseDados.mes.findIndex(m => m.periodo === `${mesNormalizado}/${anoAlvo}`);
+          const janelaMeses = idx >= 0
+            ? baseDados.mes.slice(Math.max(0, idx - 1), idx + 1)
+            : baseDados.mes.filter(m => m.periodo.endsWith('/' + anoAlvo));
+
+          pacote.meses = janelaMeses;
+          pacote.categorias_no_mes = (baseDados.cat_mes || [])
+            .filter(item => item.periodo === `${mesNormalizado}/${anoAlvo}`)
+            .map(i => ({ cat: i.categoria, ped: i.pedidos, rec: i.receita_formatada, luc: i.lucro_formatado, mg: i.margem_pct }));
+          pacote.top_produtos_no_mes = (baseDados.prod_mes || [])
+            .filter(item => item.periodo === `${mesNormalizado}/${anoAlvo}`)
+            .map(i => ({ prod: i.produto, ped: i.pedidos, rec: i.receita_formatada, mg: i.margem_pct }));
+        } else {
+          // Envia os meses do ano alvo (máx. 12 meses) de forma compacta
+          pacote.meses_do_ano = baseDados.mes
+            .filter(m => m.periodo.endsWith('/' + anoAlvo))
+            .map(m => ({
+              per: m.periodo,
+              ped: m.pedidos,
+              rec: m.receita_formatada,
+              luc: m.lucro_formatado,
+              mg: m.margem_pct,
+              var_rec_pct: m.variacao_receita_mes_anterior_pct
+            }));
+          const ultimoPeriodo = baseDados.geral.ultimo_mes_disponivel;
+          pacote.categorias_ultimo_mes = (baseDados.cat_mes || [])
+            .filter(item => item.periodo === ultimoPeriodo)
+            .map(i => ({ cat: i.categoria, rec: i.receita_formatada, mg: i.margem_pct }));
         }
       }
 
-      if (!mesNormalizado && /ultimo mes|mes atual|resuma o mes|resumir o mes|desempenho do mes/.test(q)) {
-        mesNormalizado = baseDados.geral.ultimo_mes_disponivel.split('/')[0];
-      }
-
-      const anoMatch = q.match(/\b(20)?(24|25|26)\b/);
-      const anoAlvo = anoMatch ? '20' + anoMatch[2] : baseDados.geral.ultimo_mes_disponivel.split('/')[1];
-
-      if (mesNormalizado) {
-        const idx = mesesLista.findIndex(m => m.periodo === `${mesNormalizado}/${anoAlvo}`);
-        const mesAnterior = idx > 0 ? [mesesLista[idx - 1]] : [];
-        const mesmoMesOutrosAnos = mesesLista.filter(m => m.periodo.startsWith(mesNormalizado + '/'));
-
-        const mapaMeses = new Map();
-        [...mesAnterior, ...mesmoMesOutrosAnos].forEach(m => mapaMeses.set(m.periodo, m));
-        pacote.meses = Array.from(mapaMeses.values());
-
-        pacote.categorias_no_mes = catsMes
-          .filter(item => item.periodo.startsWith(mesNormalizado + '/'))
-          .map(i => ({ per: i.periodo, cat: i.categoria, ped: i.pedidos, rec: i.receita_formatada, luc: i.lucro_formatado, mg: i.margem_pct }));
-        pacote.top_produtos_no_mes = prodsMes
-          .filter(item => item.periodo === `${mesNormalizado}/${anoAlvo}`)
-          .map(i => ({ prod: i.produto, ped: i.pedidos, rec: i.receita_formatada, mg: i.margem_pct }));
-      } else {
-        const mesesAno = mesesLista.filter(m => m.periodo.endsWith(`/${anoAlvo}`));
-        pacote.meses = mesesAno.length > 0 ? mesesAno : mesesLista.slice(-12);
-      }
-
-      const querCategoria = /categor|suplement|oleo|grao|outros|margem/.test(q);
-      const querProduto = /produt|creatina|omega|pre-treino|whey|item|itens|margem/.test(q);
-      const querEstado = /estado|uf|\bsp\b|\brj\b|\bmg\b|\bes\b|regiao|margem/.test(q);
-      const querCliente = /client|comprador|cresce|crescimento|recorren/.test(q);
-
-      if (querCategoria || (!mesNormalizado && !querProduto && !querEstado && !querCliente)) {
-        pacote.categorias = cats.map(i => ({
-          cat: i.categoria, ped: i.pedidos, rec: i.receita_formatada, luc: i.lucro_formatado, mg: i.margem_pct
-        }));
-      }
-      if (querProduto) {
-        pacote.produtos = prods.slice(0, 12).map(i => ({
-          prod: i.produto, ped: i.pedidos, rec: i.receita_formatada, luc: i.lucro_formatado, mg: i.margem_pct
-        }));
-      }
-      if (querEstado) {
-        pacote.estados = ufs.map(i => ({
-          uf: i.estado, ped: i.pedidos, rec: i.receita_formatada, luc: i.lucro_formatado, mg: i.margem_pct
-        }));
-      }
-      if (querCliente) {
-        pacote.top_clientes = clisTop.slice(0, 10).map(i => ({
-          cli: i.cliente, ped: i.pedidos, rec: i.receita_formatada, mg: i.margem_pct
-        }));
-        pacote.clientes_crescimento = clisCresc.slice(0, 8).map(i => ({
-          cli: i.cliente, ant: i.receita_anterior_fmt, atu: i.receita_atual_fmt, var_pct: i.variacao_pct
+      if (pedeProduto || (!pedeTempo && !pedeRegiao && !pedeCliente)) {
+        pacote.produtos = baseDados.prod.map(p => ({
+          prod: p.produto,
+          cat: p.categoria,
+          rec: p.receita_formatada,
+          luc: p.lucro_formatada,
+          mg: p.margem_pct,
+          diff_mg_pp: p.diferenca_margem_media_pp
         }));
       }
 
-      return pacote;
+      if (pedeRegiao) {
+        pacote.estados = baseDados.reg.map(r => ({
+          uf: r.estado,
+          ped: r.pedidos,
+          rec: r.receita_formatada,
+          mg: r.margem_pct
+        }));
+      }
+
+      const citados = (baseDados.cli || []).filter(c => q.includes(c.cliente.toLowerCase()));
+
+      if (pedeCliente || citados.length > 0) {
+        const top8 = baseDados.cli.slice(0, 8);
+        const topCresc = [...baseDados.cli].sort((a, b) => b.crescimento_ultimos_3_meses - a.crescimento_ultimos_3_meses).slice(0, 5);
+        const topQueda = [...baseDados.cli].sort((a, b) => a.crescimento_ultimos_3_meses - b.crescimento_ultimos_3_meses).slice(0, 5);
+
+        const mapaCli = new Map();
+        [...citados, ...top8, ...topCresc, ...topQueda].forEach(c => mapaCli.set(c.cliente, {
+          cli: c.cliente,
+          rec: c.receita_formatada,
+          mg: c.margem_pct,
+          var_3m: c.crescimento_ultimos_3_meses
+        }));
+        pacote.clientes = Array.from(mapaCli.values());
+      }
+
+      return JSON.stringify(pacote);
     }
 
-    async function enviarPergunta(textoUsuario) {
-      if (!textoUsuario.trim() || enviando) return;
-      if (!baseDados) {
-        adicionarMensagem('Aguarde o carregamento da base de dados antes de perguntar.', 'error');
-        return;
+    async function consultarAgente(pergunta) {
+      if (!baseDados) throw new Error('Aguarde o carregamento da base de dados.');
+
+      // Cache atrelado à versão atual do dados_ia.json (zera automaticamente quando a base atualiza)
+      const chaveCache = `bi_cache_${baseDados.atualizado_em || 'v1'}_${pergunta.trim().toLowerCase()}`;
+      const respostaEmCache = localStorage.getItem(chaveCache);
+
+      if (respostaEmCache) {
+        historicoConversa.push({ role: 'user', parts: [{ text: pergunta }] });
+        historicoConversa.push({ role: 'model', parts: [{ text: respostaEmCache }] });
+        return respostaEmCache;
       }
 
-      enviando = true;
-      btnSend.disabled = true;
-      userInput.value = '';
-      if (suggestionsBox) suggestionsBox.style.display = 'none';
+      const contextoEnxuto = selecionarContextoInteligente(pergunta);
 
-      adicionarMensagem(textoUsuario, 'user');
-      const typingEl = mostrarDigitando();
+      const instrucaoSistema = `Você é o copiloto estratégico de vendas integrado a este dashboard executivo. Converse de forma natural, analítica e direta com o gestor — como um especialista da equipe sentado ao lado dele.
 
-      const contextoFiltrado = selecionarContextoInteligente(textoUsuario);
-      const dadosJsonCompacto = JSON.stringify(contextoFiltrado);
+Regras de comportamento e estilo:
+1. NUNCA comece com apresentações robóticas ("Como Analista de BI...", "Com base nos dados fornecidos..."). Vá direto à resposta.
+2. NUNCA cite nomes de chaves do JSON (como "receita_formatada", "variacao_receita_ano_anterior_pct", "margem_pct"), siglas técnicas em inglês ("MoM", "YoY") ou datas em formato código ("2026-12"). Escreva sempre em português natural ("em relação ao ano anterior", "dezembro de 2026", "nos últimos três meses").
+3. Varie a estrutura conforme a pergunta: use parágrafos curtos e fluidos quando for uma explicação ou comparação; use bullet points apenas quando estiver listando rankings (produtos ou clientes). Não force um bloco fixo de "Ação Recomendada" no fim de toda resposta — só sugira um próximo passo quando houver um alerta real nos números.
+4. Destaque em **negrito** apenas os nomes-chave e valores principais.
+5. Use exclusivamente os números do JSON. A margem média geral da empresa é **${baseDados.geral.margem_media_geral_pct}%** e o mês mais recente da base é **${baseDados.geral.ultimo_mes_disponivel}**.
+6. Ao citar valores monetários grandes, use exatamente os campos formatados já prontos no JSON (como \`receita_formatada\`, \`custo_formatado\` e \`lucro_formatado\`) e os percentuais de variação pré-calculados — nunca arredonde milhões de cabeça e nunca misture valores de anos diferentes.`;
 
-      const instrucaoSistema = `Você é o Analista de BI Executivo integrado a este painel comercial.
-Responda em português do Brasil com tom consultivo, natural, direto e objetivo.
+      // Mantém apenas as últimas 2 mensagens do histórico para economizar tokens por requisição
+      const janelaHistorico = historicoConversa.slice(-2);
+      const contents = [
+        ...janelaHistorico,
+        {
+          role: 'user',
+          parts: [{ text: `DADOS:\n${contextoEnxuto}\n\nPERGUNTA: ${pergunta}` }]
+        }
+      ];
 
-REGRAS ESTRITAS:
-1. USE EXCLUSIVAMENTE OS DADOS DO JSON FORNECIDO. Nunca invente valores ou datas. Se um recorte não estiver presente no JSON, informe de maneira natural que essa abertura específica não consta na base atual.
-2. NUNCA mencione nomes de chaves técnicas do JSON (como "receita_formatada", "var_receita_mom_pct", "rec", "luc", "mg", "ped") e NUNCA faça cálculos manuais aproximados quando o valor formatado já estiver no JSON. Use os valores exatos em R$ e %.
-3. NÃO inicie a resposta com frases robóticas como "Com base nos dados fornecidos", "De acordo com o JSON", "Olá" ou "Aqui está". Vá direto ao ponto na primeira frase e nunca use subtítulos ou seções artificiais como "Pontos de atenção" ou "Em resumo" — finalize naturalmente em texto corrido.
-4. Destaque em **negrito** os números-chave (faturamento, margem %, pedidos, ticket médio e variações) e organize comparações ou rankings em tópicos curtos e escaneáveis.`;
-
-      historicoConversa.push({
-        role: 'user',
-        parts: [{
-          text: `DADOS RELEVANTES:\n${dadosJsonCompacto}\n\nPERGUNTA:\n${textoUsuario}`
-        }]
+      const resp = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: instrucaoSistema }] },
+          contents
+        })
       });
 
-      const mensagensParaEnviar = historicoConversa.slice(-4);
+      const textoBruto = await resp.text();
+      let data;
+      try {
+        data = JSON.parse(textoBruto);
+      } catch (e) {
+        throw new Error('O servidor demorou para responder. Tente enviar a pergunta novamente.');
+      }
+
+      if (!resp.ok || data.error) {
+        throw new Error(data.error?.message || 'Erro de comunicação com o servidor de IA.');
+      }
 
       try {
-        const resp = await fetch(WORKER_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: instrucaoSistema }] },
-            contents: mensagensParaEnviar
-          })
-        });
+        localStorage.setItem(chaveCache, data.texto);
+      } catch (e) {
+        // Ignora se o storage do navegador estiver cheio
+      }
 
-        const data = await resp.json();
-        typingEl.remove();
+      historicoConversa.push({ role: 'user', parts: [{ text: pergunta }] });
+      historicoConversa.push({ role: 'model', parts: [{ text: data.texto }] });
 
-        if (!resp.ok || data.error) {
-          throw new Error(data.error?.message || `Erro HTTP ${resp.status}`);
-        }
+      return data.texto;
+    }
 
-        const respostaIA = data.texto || data.candidates?.[0]?.content?.parts?.[0]?.text || 'Não foi possível gerar uma resposta.';
+    async function enviar() {
+      const input = document.getElementById('pergunta');
+      const btn = document.getElementById('btnEnviar');
+      const scrollArea = document.getElementById('scrollArea');
+      const texto = input.value.trim();
 
-        historicoConversa[historicoConversa.length - 1] = {
-          role: 'user',
-          parts: [{ text: textoUsuario }]
-        };
-        historicoConversa.push({
-          role: 'model',
-          parts: [{ text: respostaIA }]
-        });
+      if (!texto) return;
 
-        adicionarMensagem(respostaIA, 'ai');
+      const userDiv = document.createElement('div');
+      userDiv.className = 'card-user dinamico';
+      userDiv.textContent = texto;
+      scrollArea.appendChild(userDiv);
+
+      input.value = '';
+      input.disabled = true;
+      btn.disabled = true;
+      document.querySelectorAll('.suggestion-btn').forEach(b => b.disabled = true);
+
+      const botDiv = document.createElement('div');
+      botDiv.className = 'card-insight muted dinamico';
+      botDiv.innerHTML = 'Analisando indicadores<span class="typing-dots"></span>';
+      scrollArea.appendChild(botDiv);
+      scrollArea.scrollTop = scrollArea.scrollHeight;
+
+      try {
+        const resposta = await consultarAgente(texto);
+        botDiv.className = 'card-insight dinamico';
+        botDiv.innerHTML = renderizarMarkdown(resposta);
       } catch (err) {
-        if (typingEl) typingEl.remove();
-        historicoConversa.pop();
-        adicionarMensagem(`Não foi possível concluir a análise agora (${err.message}). Tente novamente em alguns segundos.`, 'error');
+        botDiv.textContent = 'Erro: ' + err.message;
       } finally {
-        enviando = false;
-        btnSend.disabled = false;
-        userInput.focus();
+        input.disabled = false;
+        btn.disabled = false;
+        document.querySelectorAll('.suggestion-btn').forEach(b => b.disabled = false);
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+        input.focus();
       }
     }
 
-    chatForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      enviarPergunta(userInput.value);
-    });
+    function usarSugestao(elemento) {
+      const texto = typeof elemento === 'string' ? elemento : elemento.textContent.trim();
+      const input = document.getElementById('pergunta');
+      input.value = texto;
+      enviar();
+    }
 
-    document.querySelectorAll('.suggestion-chip').forEach(btn => {
-      btn.addEventListener('click', () => {
-        enviarPergunta(btn.getAttribute('data-q'));
-      });
-    });
-
-    btnReset.addEventListener('click', () => {
+    function novaConversa() {
       historicoConversa = [];
-      const mensagens = chatArea.querySelectorAll('.msg-bubble:not(#insight-inicial)');
-      mensagens.forEach(m => m.remove());
-      if (suggestionsBox) suggestionsBox.style.display = 'flex';
-    });
+      document.querySelectorAll('.dinamico').forEach(el => el.remove());
+    }
 
-    carregarBaseDados();
+    carregarDados();
   </script>
 </body>
 </html>
