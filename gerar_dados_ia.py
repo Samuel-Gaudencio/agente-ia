@@ -27,53 +27,26 @@ def conectar_sheets():
         creds = Credentials.from_service_account_file('credentials.json', scopes=scopes)
     client = gspread.authorize(creds)
     sheet = client.open_by_key(SPREADSHEET_ID).worksheet(ABA_DADOS)
-    return pd.DataFrame(sheet.get_all_records())
-
-def parse_numero(val):
-    if isinstance(val, (int, float)):
-        return float(val)
-    s = str(val).strip().replace('R$', '').strip()
-    if not s:
-        return 0.0
-    if ',' in s and '.' in s:
-        s = s.replace('.', '').replace(',', '.')
-    elif ',' in s:
-        s = s.replace(',', '.')
-    try:
-        return float(s)
-    except ValueError:
-        return 0.0
-
-def parse_margem(val):
-    # Trata porcentagem vinda do Google Sheets (ex: 0.3234 ou "32,34%" ou 32.34)
-    if isinstance(val, (int, float)):
-        num = float(val)
-        # Se o Sheets entregou em decimal (ex: 0.3234), converte para 32.34
-        return num * 100.0 if -2.0 <= num <= 2.0 else num
-    s = str(val).strip()
-    tem_pct = '%' in s
-    s = s.replace('%', '').strip()
-    num = parse_numero(s)
-    if not tem_pct and -2.0 <= num <= 2.0:
-        return num * 100.0
-    return num
+    # UNFORMATTED_VALUE traz os floats exatos do banco da planilha (ex: 1031.8, 423.04)
+    return pd.DataFrame(sheet.get_all_records(value_render_option='UNFORMATTED_VALUE'))
 
 df = conectar_sheets()
-# Normaliza nomes das colunas para evitar erro por espaço ou maiúscula/minúscula
 df.columns = [c.strip().upper() for c in df.columns]
 
-df['VENDA'] = df['VENDA TOTAL'].apply(parse_numero)
-df['MARGEM_LINHA'] = df['MARGEM'].apply(parse_margem)
-# Calcula o lucro exato da linha a partir da venda e da margem da planilha
-df['LUCRO'] = df['VENDA'] * (df['MARGEM_LINHA'] / 100.0)
-df['CUSTO'] = df['VENDA'] - df['LUCRO']
+df['VENDA'] = pd.to_numeric(df['VENDA TOTAL'], errors='coerce').fillna(0.0)
+df['CUSTO'] = pd.to_numeric(df['CUSTO TOTAL'], errors='coerce').fillna(0.0)
 df['QTD'] = pd.to_numeric(df['QTD'], errors='coerce').fillna(0).astype(int)
 
-df['DT'] = pd.to_datetime(df['DATA'], format='%m/%d/%Y', errors='coerce')
-mask_na = df['DT'].isna()
-if mask_na.any():
-    df.loc[mask_na, 'DT'] = pd.to_datetime(df.loc[mask_na, 'DATA'], dayfirst=True, errors='coerce')
+# No UNFORMATTED_VALUE, datas do Google Sheets vêm como serial numérico (dias desde 30/12/1899) ou string
+def parse_data_sheets(val):
+    if isinstance(val, (int, float)):
+        return pd.to_datetime(val, unit='D', origin='1899-12-30')
+    dt = pd.to_datetime(str(val), dayfirst=True, errors='coerce')
+    if pd.isna(dt):
+        dt = pd.to_datetime(str(val), format='%m/%d/%Y', errors='coerce')
+    return dt
 
+df['DT'] = df['DATA'].apply(parse_data_sheets)
 df['ANO'] = df['DT'].dt.year.astype(str)
 df['MES_ORD'] = df['DT'].dt.to_period('M').astype(str)
 
@@ -82,10 +55,10 @@ def agregar(dataframe, cols):
         pedidos=('ID PEDIDO', 'count'),
         quantidade=('QTD', 'sum'),
         receita=('VENDA', 'sum'),
-        custo=('CUSTO', 'sum'),
-        lucro=('LUCRO', 'sum')
+        custo=('CUSTO', 'sum')
     )
-    # Margem ponderada pela receita (bate 100% com o Looker Studio)
+    g['lucro'] = g['receita'] - g['custo']
+    # Fórmula idêntica ao Looker Studio: (SUM(VENDA TOTAL) - SUM(CUSTO TOTAL)) / SUM(VENDA TOTAL)
     g['margem_pct'] = ((g['lucro'] / g['receita']) * 100).fillna(0).round(2)
     g['receita'] = g['receita'].round(2)
     g['custo'] = g['custo'].round(2)
@@ -94,7 +67,7 @@ def agregar(dataframe, cols):
 
 rec_total = float(df['VENDA'].sum())
 cst_total = float(df['CUSTO'].sum())
-luc_total = float(df['LUCRO'].sum())
+luc_total = rec_total - cst_total
 mg_geral = round((luc_total / rec_total) * 100, 2) if rec_total > 0 else 0.0
 
 por_mes = agregar(df, ['MES_ORD']).sort_values('MES_ORD').reset_index(drop=True)
@@ -175,4 +148,4 @@ saida = {
 with open('dados_ia.json', 'w', encoding='utf-8') as f:
     json.dump(saida, f, ensure_ascii=False, separators=(',', ':'))
 
-print(f"dados_ia.json atualizado! Receita: {brl(rec_total)} | Margem: {mg_geral}%")
+print(f"OK! Receita: {brl(rec_total)} | Custo: {brl(cst_total)} | Margem: {mg_geral}%")
