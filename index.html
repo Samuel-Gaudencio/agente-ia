@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assistente de Análise BI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      background-color: #041836;
+      color: #e6e9ef;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #63a4e6;
+      font-size: 13.5px;
+      font-weight: 600;
+    }
+
+    .title svg {
+      width: 15px;
+      height: 15px;
+      fill: #63a4e6;
+      flex-shrink: 0;
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge-update {
+      font-size: 10px;
+      color: #7c98b6;
+    }
+
+    .icon-btn {
+      background: #101417;
+      border: 1px solid #233b56;
+      color: #63a4e6;
+      border-radius: 6px;
+      padding: 3px 7px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .icon-btn:hover { border-color: #63a4e6; }
+
+    .scroll-area {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      padding-right: 3px;
+    }
+
+    .scroll-area::-webkit-scrollbar { width: 4px; }
+    .scroll-area::-webkit-scrollbar-thumb { background: #1d3b5e; border-radius: 4px; }
+
+    .section-label {
+      color: #5b9bd5;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      margin-top: 2px;
+    }
+
+    .card-insight {
+      background-color: #111417;
+      border: 1px solid #1c2836;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 12px;
+      line-height: 1.48;
+      color: #e2e6ec;
+    }
+
+    .card-insight.muted { color: #9fb0c2; }
+
+    .card-insight ul {
+      margin: 4px 0;
+      padding-left: 16px;
+    }
+
+    .card-insight li {
+      margin-bottom: 4px;
+    }
+
+    .card-user {
+      background-color: #0b2952;
+      border: 1px solid #2b5482;
+      border-radius: 8px;
+      padding: 8px 11px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #ffffff;
+      align-self: flex-end;
+      max-width: 90%;
+    }
+
+    .suggestions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .suggestion-btn {
+      width: 100%;
+      text-align: left;
+      background-color: #111417;
+      border: 1px solid #3c6997;
+      border-radius: 8px;
+      padding: 7px 11px;
+      color: #63a4e6;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .suggestion-btn:hover { background-color: #18222d; border-color: #63a4e6; }
+    .suggestion-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .typing-dots::after {
+      content: '...';
+      animation: dots 1.2s steps(3, end) infinite;
+    }
+
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+
+    .input-box {
+      margin-top: 8px;
+      background-color: #111417;
+      border: 1px solid #3c6997;
+      border-radius: 8px;
+      padding: 7px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .input-box textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #e6e9ef;
+      font-size: 12px;
+      line-height: 1.35;
+      resize: none;
+      height: 32px;
+      outline: none;
+      padding: 0;
+    }
+
+    .input-box textarea::placeholder { color: #8a8f98; }
+
+    .send-btn {
+      background: transparent;
+      border: none;
+      padding: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .send-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke: #5b9bd5;
+      fill: none;
+      stroke-width: 1.8;
+    }
+
+    .send-btn:disabled svg { stroke: #4c5663; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="title">
+      <svg viewBox="0 0 24 24">
+        <path d="M10 2L11.8 7.2L17 9L11.8 10.8L10 16L8.2 10.8L3 9L8.2 7.2L10 2ZM18 14L19 16.8L21.8 17.8L19 18.8L18 21.6L17 18.8L14.2 17.8L17 16.8L18 14Z"/>
+      </svg>
+      <span>Assistente de análise</span>
+    </div>
+    <div class="header-meta">
+      <span class="badge-update" id="badgeUpdate"></span>
+      <button class="icon-btn" onclick="novaConversa()" title="Nova conversa">↻</button>
+    </div>
+  </div>
+
+  <div class="scroll-area" id="scrollArea">
+    <div class="section-label">Diagnóstico automático</div>
+    <div class="card-insight" id="insight1">Carregando indicadores...</div>
+    <div class="card-insight muted" id="insight2">Sincronizando base...</div>
+
+    <div class="section-label">Sugestões rápidas</div>
+    <div class="suggestions-list">
+      <button class="suggestion-btn" onclick="usarSugestao(this)">Resumir o mês</button>
+      <button class="suggestion-btn" onclick="usarSugestao(this)">Onde perco margem?</button>
+      <button class="suggestion-btn" onclick="usarSugestao(this)">Quais clientes crescem?</button>
+    </div>
+  </div>
+
+  <div class="input-box">
+    <textarea id="pergunta" placeholder="Pergunte sobre os dados" onkeydown="if(event.key==='Enter' && !event.shiftKey){ event.preventDefault(); enviar(); }"></textarea>
+    <button class="send-btn" id="btnEnviar" onclick="enviar()" title="Enviar">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="22" y1="2" x2="11" y2="13"></line>
+        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+      </svg>
+    </button>
+  </div>
+
+  <script>
+    // COLE AQUI A URL DO SEU CLOUDFLARE WORKER:
+    const WORKER_URL = 'https://agente-bi-gemini.seu-subdominio.workers.dev';
+
+    let baseDados = null;
+    let historicoConversa = []; // Guarda apenas texto limpo (sem JSON repetido)
+
+    async function carregarBase() {
+      try {
+        const resp = await fetch('./dados_ia.json?v=' + Date.now());
+        if (!resp.ok) throw new Error('Falha HTTP ' + resp.status);
+        baseDados = await resp.json();
+        document.getElementById('insight1').textContent = baseDados.cards.c1;
+        document.getElementById('insight2').textContent = baseDados.cards.c2;
+        if (baseDados.atualizado_em) {
+          document.getElementById('badgeUpdate').textContent = baseDados.atualizado_em.split(' ')[0];
+        }
+      } catch (e) {
+        document.getElementById('insight1').textContent = 'Erro ao carregar dados_ia.json.';
+        document.getElementById('insight2').textContent = 'Verifique se o workflow do GitHub Actions concluiu.';
+      }
+    }
+    carregarBase();
+
+    function novaConversa() {
+      historicoConversa = [];
+      document.getElementById('scrollArea').querySelectorAll('.dinamico').forEach(el => el.remove());
+    }
+
+    function usarSugestao(btn) {
+      document.getElementById('pergunta').value = btn.textContent.trim();
+      enviar();
+    }
+
+    // Formata negrito e listas Markdown para HTML limpo
+    function renderizarMarkdown(texto) {
+      const escaped = texto
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      const linhas = escaped.split('\n');
+      let html = '';
+      let emLista = false;
+
+      for (const linha of linhas) {
+        const trim = linha.trim();
+        if (trim.startsWith('* ') || trim.startsWith('- ')) {
+          if (!emLista) { html += '<ul>'; emLista = true; }
+          html += `<li>${trim.slice(2)}</li>`;
+        } else {
+          if (emLista) { html += '</ul>'; emLista = false; }
+          if (trim) html += `<div style="margin-bottom:5px;">${trim}</div>`;
+        }
+      }
+      if (emLista) html += '</ul>';
+
+      return html.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#ffffff;">$1</strong>');
+    }
+
+    // Roteador inteligente: envia APENAS os blocos relevantes para economizar até 70% dos tokens
+    function selecionarContextoInteligente(pergunta) {
+      if (!baseDados) return '{}';
+      const q = pergunta.toLowerCase();
+
+      const pacote = {
+        geral: baseDados.geral,
+        cat: baseDados.cat
+      };
+
+      const pedeTempo = /mês|mes|mensal|ano|anual|evolu|cresc|queda|tend|hist|resum|últim|ultim|2024|2025|2026/.test(q);
+      const pedeProduto = /prod|margem|lucro|custo|rentab|preju|perco|pior|melhor|suplement|grão|grao|óleo|oleo|creatina|whey/.test(q);
+      const pedeRegiao = /regi|estado|uf|rj|sp|mg|es|sudeste|rio|paulo|minas|espírito|espirito/.test(q);
+      const pedeCliente = /client|comprador|conta|top|carteira|reten|churn/.test(q);
+
+      if (pedeTempo || (!pedeProduto && !pedeRegiao && !pedeCliente)) {
+        pacote.ano = baseDados.ano;
+        pacote.mes_ultimos_8 = baseDados.mes.slice(-8);
+        pacote.cat_3m = baseDados.cat_3m;
+      }
+
+      if (pedeProduto || (!pedeTempo && !pedeRegiao && !pedeCliente)) {
+        pacote.prod = baseDados.prod;
+      }
+
+      if (pedeRegiao) {
+        pacote.reg = baseDados.reg;
+        pacote.reg_3m = baseDados.reg_3m;
+      }
+
+      // Sempre verifica se algum cliente específico foi citado pelo nome
+      const citados = baseDados.cli.filter(c => q.includes(c.CLIENTE.toLowerCase()));
+
+      if (pedeCliente || citados.length > 0) {
+        const top12 = baseDados.cli.slice(0, 12);
+        const topCrescimento = [...baseDados.cli].sort((a, b) => b.delta_3m - a.delta_3m).slice(0, 8);
+        const topQueda = [...baseDados.cli].sort((a, b) => a.delta_3m - b.delta_3m).slice(0, 6);
+
+        const mapaCli = new Map();
+        [...citados, ...top12, ...topCrescimento, ...topQueda].forEach(c => mapaCli.set(c.CLIENTE, c));
+        pacote.clientes = Array.from(mapaCli.values());
+      }
+
+      return JSON.stringify(pacote);
+    }
+
+    async function consultarAgente(pergunta) {
+      if (!baseDados) throw new Error('Aguarde o carregamento da base de dados.');
+
+      const contextoEnxuto = selecionarContextoInteligente(pergunta);
+
+      const instrucaoSistema = `Você é um Analista Sênior de BI integrado ao dashboard executivo de vendas.
+Legenda dos campos JSON: ped=pedidos, qtd=quantidade, rec=receita(R$), cst=custo(R$), luc=lucro(R$), mg=margem(%), var_rec_pct=variação receita MoM(%), var_mg_pp=variação margem(p.p.), gap_mg_pp=diferença vs margem média geral(${baseDados.geral.mg}%), delta_3m=variação receita últimos 3m vs 3m anteriores(R$).
+
+Regras estritas:
+1. Baseie-se EXCLUSIVAMENTE nos números do JSON. Nunca invente ou estime valores fora da base.
+2. Seja executivo, direto e conciso (máximo 5 bullet points curtos + 1 frase de conclusão/ação).
+3. Destaque nomes e números principais em **negrito** (ex: **R$ 125.430,00** e **34,2%**).
+4. Sempre contextualize margens comparando com a média geral da empresa (**${baseDados.geral.mg}%**).
+5. Se pedir "Resumir o mês" sem especificar qual, analise o último mês da série (**${baseDados.geral.ultimo_mes}**) usando os campos pré-calculados var_rec_pct e var_mg_pp.`;
+
+      // Janela deslizante: mantém apenas as últimas 3 trocas sem reenviar JSONs antigos
+      const janelaHistorico = historicoConversa.slice(-6);
+      const contents = [
+        ...janelaHistorico,
+        {
+          role: 'user',
+          parts: [{ text: `DADOS:\n${contextoEnxuto}\n\nPERGUNTA: ${pergunta}` }]
+        }
+      ];
+
+      const resp = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: instrucaoSistema }] },
+          contents
+        })
+      });
+
+      const data = await resp.json();
+
+      if (!resp.ok || data.error) {
+        throw new Error(data.error?.message || 'Erro de comunicação com o servidor de IA.');
+      }
+
+      // Salva no histórico apenas a pergunta limpa e a resposta (economiza milhares de tokens nas próximas perguntas)
+      historicoConversa.push({ role: 'user', parts: [{ text: pergunta }] });
+      historicoConversa.push({ role: 'model', parts: [{ text: data.texto }] });
+
+      return data.texto;
+    }
+
+    async function enviar() {
+      const input = document.getElementById('pergunta');
+      const btn = document.getElementById('btnEnviar');
+      const scrollArea = document.getElementById('scrollArea');
+      const texto = input.value.trim();
+
+      if (!texto) return;
+
+      const userDiv = document.createElement('div');
+      userDiv.className = 'card-user dinamico';
+      userDiv.textContent = texto;
+      scrollArea.appendChild(userDiv);
+
+      input.value = '';
+      input.disabled = true;
+      btn.disabled = true;
+      document.querySelectorAll('.suggestion-btn').forEach(b => b.disabled = true);
+
+      const botDiv = document.createElement('div');
+      botDiv.className = 'card-insight muted dinamico';
+      botDiv.innerHTML = 'Analisando indicadores<span class="typing-dots"></span>';
+      scrollArea.appendChild(botDiv);
+      scrollArea.scrollTop = scrollArea.scrollHeight;
+
+      try {
+        const resposta = await consultarAgente(texto);
+        botDiv.className = 'card-insight dinamico';
+        botDiv.innerHTML = renderizarMarkdown(resposta);
+      } catch (err) {
+        botDiv.textContent = 'Erro: ' + err.message;
+      } finally {
+        input.disabled = false;
+        btn.disabled = false;
+        document.querySelectorAll('.suggestion-btn').forEach(b => b.disabled = false);
+        scrollArea.scrollTop = scrollArea.scrollHeight;
+        input.focus();
+      }
+    }
+  </script>
+</body>
+</html>
