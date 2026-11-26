@@ -320,8 +320,15 @@
 
       if (pedeTempo || (!pedeProduto && !pedeRegiao && !pedeCliente)) {
         pacote.por_ano = baseDados.ano;
-        pacote.ultimos_8_meses = baseDados.mes.slice(-8);
-        pacote.categorias_ultimos_3_meses = baseDados.cat_3m;
+        // Envia TODOS os meses da base (2024, 2025 e 2026)
+        pacote.serie_mensal_completa = baseDados.mes;
+
+        // Descobre qual ano o usuário citou (ou usa o último ano se não citou)
+        const anoMatch = q.match(/\b(2024|2025|2026)\b/);
+        const anoAlvo = anoMatch ? anoMatch[1] : baseDados.geral.ultimo_mes_disponivel.split('/')[1];
+
+        pacote.categorias_por_mes_do_ano = (baseDados.cat_mes || baseDados.cat_3m).filter(item => item.periodo.endsWith('/' + anoAlvo));
+        pacote.top_produtos_por_mes_do_ano = (baseDados.prod_mes || []).filter(item => item.periodo.endsWith('/' + anoAlvo));
       }
 
       if (pedeProduto || (!pedeTempo && !pedeRegiao && !pedeCliente)) {
