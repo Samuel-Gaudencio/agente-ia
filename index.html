@@ -409,7 +409,13 @@ Regras de comportamento e estilo:
         })
       });
 
-      const data = await resp.json();
+      const textoBruto = await resp.text();
+      let data;
+      try {
+        data = JSON.parse(textoBruto);
+      } catch (e) {
+        throw new Error('O servidor demorou para responder. Tente enviar a pergunta novamente.');
+      }
 
       if (!resp.ok || data.error) {
         throw new Error(data.error?.message || 'Erro de comunicação com o servidor de IA.');
