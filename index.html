@@ -101,6 +101,14 @@
 
     .card-insight.muted { color: #9fb0c2; }
 
+    .card-insight p {
+      margin: 0 0 6px 0;
+    }
+
+    .card-insight p:last-child {
+      margin-bottom: 0;
+    }
+
     .card-insight ul {
       margin: 4px 0;
       padding-left: 16px;
@@ -243,7 +251,7 @@
     </button>
   </div>
 
- <script>
+  <script>
     const WORKER_URL = 'https://woker.smg28341133.workers.dev';
     let baseDados = null;
     let historicoConversa = [];
@@ -283,9 +291,9 @@
     }
 
     async function carregarDados() {
-      const c1 = document.getElementById('card1');
-      const c2 = document.getElementById('card2');
-      const dataBadge = document.getElementById('dataAtualizacao');
+      const c1 = document.getElementById('insight1');
+      const c2 = document.getElementById('insight2');
+      const dataBadge = document.getElementById('badgeUpdate');
 
       try {
         const resp = await fetch('dados_ia.json?t=' + Date.now());
@@ -441,23 +449,17 @@ Regras de comportamento e estilo:
       }
     }
 
-    function usarSugestao(texto) {
+    function usarSugestao(elemento) {
+      const texto = typeof elemento === 'string' ? elemento : elemento.textContent.trim();
       const input = document.getElementById('pergunta');
       input.value = texto;
       enviar();
     }
 
-    function resetarChat() {
+    function novaConversa() {
       historicoConversa = [];
       document.querySelectorAll('.dinamico').forEach(el => el.remove());
     }
-
-    document.getElementById('pergunta').addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        enviar();
-      }
-    });
 
     carregarDados();
   </script>
