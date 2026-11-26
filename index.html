@@ -244,66 +244,8 @@
   </div>
 
   <script>
-    // COLE AQUI A URL DO SEU CLOUDFLARE WORKER:
     const WORKER_URL = 'https://woker.smg28341133.workers.dev';
 
-    let baseDados = null;
-    let historicoConversa = []; // Guarda apenas texto limpo (sem JSON repetido)
-
-    async function carregarBase() {
-      try {
-        const resp = await fetch('./dados_ia.json?v=' + Date.now());
-        if (!resp.ok) throw new Error('Falha HTTP ' + resp.status);
-        baseDados = await resp.json();
-        document.getElementById('insight1').textContent = baseDados.cards.c1;
-        document.getElementById('insight2').textContent = baseDados.cards.c2;
-        if (baseDados.atualizado_em) {
-          document.getElementById('badgeUpdate').textContent = baseDados.atualizado_em.split(' ')[0];
-        }
-      } catch (e) {
-        document.getElementById('insight1').textContent = 'Erro ao carregar dados_ia.json.';
-        document.getElementById('insight2').textContent = 'Verifique se o workflow do GitHub Actions concluiu.';
-      }
-    }
-    carregarBase();
-
-    function novaConversa() {
-      historicoConversa = [];
-      document.getElementById('scrollArea').querySelectorAll('.dinamico').forEach(el => el.remove());
-    }
-
-    function usarSugestao(btn) {
-      document.getElementById('pergunta').value = btn.textContent.trim();
-      enviar();
-    }
-
-    // Formata negrito e listas Markdown para HTML limpo
-    function renderizarMarkdown(texto) {
-      const escaped = texto
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-
-      const linhas = escaped.split('\n');
-      let html = '';
-      let emLista = false;
-
-      for (const linha of linhas) {
-        const trim = linha.trim();
-        if (trim.startsWith('* ') || trim.startsWith('- ')) {
-          if (!emLista) { html += '<ul>'; emLista = true; }
-          html += `<li>${trim.slice(2)}</li>`;
-        } else {
-          if (emLista) { html += '</ul>'; emLista = false; }
-          if (trim) html += `<div style="margin-bottom:5px;">${trim}</div>`;
-        }
-      }
-      if (emLista) html += '</ul>';
-
-      return html.replace(/\*\*(.*?)\*\*/g, '<strong style="color:#ffffff;">$1</strong>');
-    }
-
-    // Roteador inteligente: envia APENAS os blocos relevantes para economizar até 70% dos tokens
     function selecionarContextoInteligente(pergunta) {
       if (!baseDados) return '{}';
       const q = pergunta.toLowerCase();
@@ -320,14 +262,13 @@
 
       if (pedeTempo || (!pedeProduto && !pedeRegiao && !pedeCliente)) {
         pacote.por_ano = baseDados.ano;
-        // Envia TODOS os meses da base (2024, 2025 e 2026)
+        // Envia todos os 36 meses (2024, 2025 e 2026) com receita_formatada e variações pré-calculadas
         pacote.serie_mensal_completa = baseDados.mes;
 
-        // Descobre qual ano o usuário citou (ou usa o último ano se não citou)
         const anoMatch = q.match(/\b(2024|2025|2026)\b/);
         const anoAlvo = anoMatch ? anoMatch[1] : baseDados.geral.ultimo_mes_disponivel.split('/')[1];
 
-        pacote.categorias_por_mes_do_ano = (baseDados.cat_mes || baseDados.cat_3m).filter(item => item.periodo.endsWith('/' + anoAlvo));
+        pacote.categorias_por_mes_do_ano = (baseDados.cat_mes || baseDados.cat_3m || []).filter(item => item.periodo.endsWith('/' + anoAlvo));
         pacote.top_produtos_por_mes_do_ano = (baseDados.prod_mes || []).filter(item => item.periodo.endsWith('/' + anoAlvo));
       }
 
@@ -337,7 +278,7 @@
 
       if (pedeRegiao) {
         pacote.por_estado = baseDados.reg;
-        pacote.estados_ultimos_3_meses = baseDados.reg_3m;
+        pacote.estados_por_mes = baseDados.reg_mes || baseDados.reg_3m || [];
       }
 
       const citados = baseDados.cli.filter(c => q.includes(c.cliente.toLowerCase()));
@@ -364,10 +305,11 @@
 
 Regras de comportamento e estilo:
 1. NUNCA comece com apresentações robóticas ("Como Analista de BI...", "Com base nos dados fornecidos..."). Vá direto à resposta.
-2. NUNCA cite nomes de chaves do JSON (como "delta_3m", "var_rec_pct", "margem_pct"), siglas técnicas em inglês ("MoM", "YoY") ou datas em formato código ("2026-12"). Escreva sempre em português natural ("em relação ao mês anterior", "dezembro de 2026", "nos últimos três meses").
-3. Varie a estrutura conforme a pergunta: use parágrafos curtos e fluidos quando for uma explicação ou fechamento de mês; use bullet points apenas quando estiver listando rankings (produtos ou clientes). Não force um bloco fixo de "Ação Recomendada" no fim de toda resposta — só sugira um próximo passo quando houver um alerta real nos números.
-4. Destaque em **negrito** apenas os nomes-chave e valores principais (ex: **R$ 4,34 milhões** ou **R$ 179.243,10** e **32,4%**).
-5. Use exclusivamente os números do JSON. A margem média geral da empresa é **${baseDados.geral.margem_media_geral_pct}%** e o mês mais recente da base é **${baseDados.geral.ultimo_mes_disponivel}**.`;
+2. NUNCA cite nomes de chaves do JSON (como "receita_formatada", "variacao_receita_ano_anterior_pct", "margem_pct"), siglas técnicas em inglês ("MoM", "YoY") ou datas em formato código ("2026-12"). Escreva sempre em português natural ("em relação ao ano anterior", "dezembro de 2026", "nos últimos três meses").
+3. Varie a estrutura conforme a pergunta: use parágrafos curtos e fluidos quando for uma explicação ou comparação; use bullet points apenas quando estiver listando rankings (produtos ou clientes). Não force um bloco fixo de "Ação Recomendada" no fim de toda resposta — só sugira um próximo passo quando houver um alerta real nos números.
+4. Destaque em **negrito** apenas os nomes-chave e valores principais.
+5. Use exclusivamente os números do JSON. A margem média geral da empresa é **${baseDados.geral.margem_media_geral_pct}%** e o mês mais recente da base é **${baseDados.geral.ultimo_mes_disponivel}**.
+6. Ao citar valores monetários grandes, use exatamente os campos formatados já prontos no JSON (como \`receita_formatada\`, \`custo_formatado\` e \`lucro_formatado\`) e os percentuais de variação pré-calculados — nunca arredonde milhões de cabeça e nunca misture valores de anos diferentes.`;
 
       const janelaHistorico = historicoConversa.slice(-6);
       const contents = [
