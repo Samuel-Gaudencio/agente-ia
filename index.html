@@ -320,45 +320,101 @@
       if (!baseDados) return '{}';
       const q = pergunta.toLowerCase();
 
+      const mesesNomes = ['janeiro', 'fevereiro', 'março', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+      const mesEncontrado = mesesNomes.find(m => q.includes(m));
+      const mesNormalizado = mesEncontrado === 'marco' ? 'março' : mesEncontrado;
+
+      const anoMatch = q.match(/\b(2024|2025|2026)\b/);
+      const anoAlvo = anoMatch ? anoMatch[1] : baseDados.geral.ultimo_mes_disponivel.split('/')[1];
+
       const pacote = {
-        geral: baseDados.geral,
-        categorias: baseDados.cat
+        geral: {
+          pedidos: baseDados.geral.total_pedidos,
+          receita: baseDados.geral.receita_total,
+          margem_geral_pct: baseDados.geral.margem_media_geral_pct,
+          ultimo_mes: baseDados.geral.ultimo_mes_disponivel
+        },
+        anos: baseDados.ano,
+        categorias_geral: baseDados.cat.map(c => ({
+          cat: c.categoria,
+          rec: c.receita_formatada,
+          mg: c.margem_pct
+        }))
       };
 
-      const pedeTempo = /mês|mes|mensal|ano|anual|evolu|cresc|queda|tend|hist|resum|últim|ultim|janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|2024|2025|2026/.test(q);
+      const pedeTempo = /mês|mes|mensal|ano|anual|evolu|cresc|queda|tend|hist|resum|últim|ultim|2024|2025|2026/.test(q) || !!mesNormalizado;
       const pedeProduto = /prod|margem|lucro|custo|rentab|preju|perco|pior|melhor|suplement|grão|grao|óleo|oleo|creatina|whey/.test(q);
       const pedeRegiao = /regi|estado|uf|rj|sp|mg|es|sudeste|rio|paulo|minas|espírito|espirito/.test(q);
       const pedeCliente = /client|comprador|conta|top|carteira|reten|churn/.test(q);
 
       if (pedeTempo || (!pedeProduto && !pedeRegiao && !pedeCliente)) {
-        pacote.por_ano = baseDados.ano;
-        pacote.serie_mensal_completa = baseDados.mes;
+        if (mesNormalizado) {
+          // Filtra apenas o mês específico pedido (ex: novembro/2026) e o mês anterior para comparação
+          const idx = baseDados.mes.findIndex(m => m.periodo === `${mesNormalizado}/${anoAlvo}`);
+          const janelaMeses = idx >= 0
+            ? baseDados.mes.slice(Math.max(0, idx - 1), idx + 1)
+            : baseDados.mes.filter(m => m.periodo.endsWith('/' + anoAlvo));
 
-        const anoMatch = q.match(/\b(2024|2025|2026)\b/);
-        const anoAlvo = anoMatch ? anoMatch[1] : baseDados.geral.ultimo_mes_disponivel.split('/')[1];
-
-        pacote.categorias_por_mes_do_ano = (baseDados.cat_mes || baseDados.cat_3m || []).filter(item => item.periodo.endsWith('/' + anoAlvo));
-        pacote.top_produtos_por_mes_do_ano = (baseDados.prod_mes || []).filter(item => item.periodo.endsWith('/' + anoAlvo));
+          pacote.meses = janelaMeses;
+          pacote.categorias_no_mes = (baseDados.cat_mes || [])
+            .filter(item => item.periodo === `${mesNormalizado}/${anoAlvo}`)
+            .map(i => ({ cat: i.categoria, ped: i.pedidos, rec: i.receita_formatada, luc: i.lucro_formatado, mg: i.margem_pct }));
+          pacote.top_produtos_no_mes = (baseDados.prod_mes || [])
+            .filter(item => item.periodo === `${mesNormalizado}/${anoAlvo}`)
+            .map(i => ({ prod: i.produto, ped: i.pedidos, rec: i.receita_formatada, mg: i.margem_pct }));
+        } else {
+          // Envia os meses do ano alvo (máx. 12 meses) de forma compacta
+          pacote.meses_do_ano = baseDados.mes
+            .filter(m => m.periodo.endsWith('/' + anoAlvo))
+            .map(m => ({
+              per: m.periodo,
+              ped: m.pedidos,
+              rec: m.receita_formatada,
+              luc: m.lucro_formatado,
+              mg: m.margem_pct,
+              var_rec_pct: m.variacao_receita_mes_anterior_pct
+            }));
+          const ultimoPeriodo = baseDados.geral.ultimo_mes_disponivel;
+          pacote.categorias_ultimo_mes = (baseDados.cat_mes || [])
+            .filter(item => item.periodo === ultimoPeriodo)
+            .map(i => ({ cat: i.categoria, rec: i.receita_formatada, mg: i.margem_pct }));
+        }
       }
 
       if (pedeProduto || (!pedeTempo && !pedeRegiao && !pedeCliente)) {
-        pacote.produtos = baseDados.prod;
+        pacote.produtos = baseDados.prod.map(p => ({
+          prod: p.produto,
+          cat: p.categoria,
+          rec: p.receita_formatada,
+          luc: p.lucro_formatada,
+          mg: p.margem_pct,
+          diff_mg_pp: p.diferenca_margem_media_pp
+        }));
       }
 
       if (pedeRegiao) {
-        pacote.por_estado = baseDados.reg;
-        pacote.estados_por_mes = baseDados.reg_mes || baseDados.reg_3m || [];
+        pacote.estados = baseDados.reg.map(r => ({
+          uf: r.estado,
+          ped: r.pedidos,
+          rec: r.receita_formatada,
+          mg: r.margem_pct
+        }));
       }
 
       const citados = (baseDados.cli || []).filter(c => q.includes(c.cliente.toLowerCase()));
 
       if (pedeCliente || citados.length > 0) {
-        const top12 = baseDados.cli.slice(0, 12);
-        const topCrescimento = [...baseDados.cli].sort((a, b) => b.crescimento_ultimos_3_meses - a.crescimento_ultimos_3_meses).slice(0, 8);
-        const topQueda = [...baseDados.cli].sort((a, b) => a.crescimento_ultimos_3_meses - b.crescimento_ultimos_3_meses).slice(0, 6);
+        const top8 = baseDados.cli.slice(0, 8);
+        const topCresc = [...baseDados.cli].sort((a, b) => b.crescimento_ultimos_3_meses - a.crescimento_ultimos_3_meses).slice(0, 5);
+        const topQueda = [...baseDados.cli].sort((a, b) => a.crescimento_ultimos_3_meses - b.crescimento_ultimos_3_meses).slice(0, 5);
 
         const mapaCli = new Map();
-        [...citados, ...top12, ...topCrescimento, ...topQueda].forEach(c => mapaCli.set(c.cliente, c));
+        [...citados, ...top8, ...topCresc, ...topQueda].forEach(c => mapaCli.set(c.cliente, {
+          cli: c.cliente,
+          rec: c.receita_formatada,
+          mg: c.margem_pct,
+          var_3m: c.crescimento_ultimos_3_meses
+        }));
         pacote.clientes = Array.from(mapaCli.values());
       }
 
