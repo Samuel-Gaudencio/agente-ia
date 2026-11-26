@@ -94,14 +94,20 @@ cli_geral['receita_ultimos_3_meses'] = cli_geral['cliente'].map(cli_rec).fillna(
 cli_geral['receita_3_meses_anteriores'] = cli_geral['cliente'].map(cli_ant).fillna(0).round(2)
 cli_geral['crescimento_ultimos_3_meses'] = (cli_geral['receita_ultimos_3_meses'] - cli_geral['receita_3_meses_anteriores']).round(2)
 
-ultimos_3 = meses_ord[-3:]
-cat_mes = agregar(df[df['MES_ORD'].isin(ultimos_3)], ['MES_ORD', 'CATEGORIA']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
+# Detalhamento mensal completo (todos os anos)
+cat_mes = agregar(df, ['MES_ORD', 'CATEGORIA']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
 cat_mes['periodo'] = cat_mes['MES_ORD'].apply(mes_extenso)
 cat_mes = cat_mes.rename(columns={'CATEGORIA': 'categoria'}).drop(columns=['MES_ORD'])
 
-reg_mes = agregar(df[df['MES_ORD'].isin(ultimos_3)], ['MES_ORD', 'REGIÃO']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
+reg_mes = agregar(df, ['MES_ORD', 'REGIÃO']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
 reg_mes['periodo'] = reg_mes['MES_ORD'].apply(mes_extenso)
 reg_mes = reg_mes.rename(columns={'REGIÃO': 'estado'}).drop(columns=['MES_ORD'])
+
+# Top 3 produtos por mês (para explicar o "porquê" de qualquer pico ou queda mensal)
+prod_mes = agregar(df, ['MES_ORD', 'PRODUTO']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
+prod_mes = prod_mes.groupby('MES_ORD').head(5).copy()
+prod_mes['periodo'] = prod_mes['MES_ORD'].apply(mes_extenso)
+prod_mes = prod_mes.rename(columns={'PRODUTO': 'produto'}).drop(columns=['MES_ORD'])
 
 piores_prod = por_prod[por_prod['receita'] > (rec_total * 0.02)].sort_values('margem_pct')
 pior = piores_prod.iloc[0] if not piores_prod.empty else por_prod.sort_values('margem_pct').iloc[0]
@@ -140,8 +146,9 @@ saida = {
     "cat": por_cat.to_dict(orient='records'),
     "prod": por_prod.to_dict(orient='records'),
     "reg": por_reg.to_dict(orient='records'),
-    "cat_3m": cat_mes.to_dict(orient='records'),
-    "reg_3m": reg_mes.to_dict(orient='records'),
+    "cat_mes": cat_mes.to_dict(orient='records'),
+    "reg_mes": reg_mes.to_dict(orient='records'),
+    "prod_mes": prod_mes.to_dict(orient='records'),
     "cli": cli_geral.to_dict(orient='records')
 }
 
