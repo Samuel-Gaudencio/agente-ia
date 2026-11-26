@@ -37,6 +37,40 @@ df['VENDA'] = pd.to_numeric(df['VENDA TOTAL'], errors='coerce').fillna(0.0)
 df['CUSTO'] = pd.to_numeric(df['CUSTO TOTAL'], errors='coerce').fillna(0.0)
 df['QTD'] = pd.to_numeric(df['QTD'], errors='coerce').fillna(0).astype(int)
 
+# --- AUDITORIA EXATA DA COLUNA DATA E PEDIDOS ---
+def converter_data_robusta(val):
+    if val is None or str(val).strip() == '':
+        return pd.NaT
+    # 1. Número serial do Google Sheets (ex: 45658)
+    if isinstance(val, (int, float)):
+        return pd.to_datetime(val, unit='D', origin='1899-12-30')
+    s = str(val).strip()
+    # 2. Tenta formato americano (M/D/YYYY) que apareceu no seu print
+    dt = pd.to_datetime(s, format='%m/%d/%Y', errors='coerce')
+    if pd.notna(dt):
+        return dt
+    # 3. Fallback para formato brasileiro (D/M/YYYY) ou ISO (YYYY-MM-DD)
+    return pd.to_datetime(s, dayfirst=True, errors='coerce')
+
+df['DT'] = df['DATA'].apply(converter_data_robusta)
+
+print(f"Total de linhas lidas: {len(df)}")
+print(f"Datas inválidas/vazias: {df['DT'].isna().sum()}")
+print(f"ID PEDIDO únicos no total: {df['ID PEDIDO'].nunique()}")
+
+df = df[df['DT'].notna()].copy()
+df['ANO'] = df['DT'].dt.year.astype(str)
+
+print("\n--- COMPARATIVO POR ANO (PYTHON vs LOOKER) ---")
+resumo_ano = df.groupby('ANO').agg(
+    linhas=('ID PEDIDO', 'count'),
+    pedidos_unicos=('ID PEDIDO', 'nunique'),
+    venda_total=('VENDA', 'sum'),
+    custo_total=('CUSTO', 'sum')
+)
+resumo_ano['margem_pct'] = ((resumo_ano['venda_total'] - resumo_ano['custo_total']) / resumo_ano['venda_total']) * 100
+print(resumo_ano.to_string())
+
 # No UNFORMATTED_VALUE, datas do Google Sheets vêm como serial numérico (dias desde 30/12/1899) ou string
 def parse_data_sheets(val):
     if isinstance(val, (int, float)):
