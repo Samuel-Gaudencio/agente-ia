@@ -243,8 +243,70 @@
     </button>
   </div>
 
-  <script>
+ <script>
     const WORKER_URL = 'https://woker.smg28341133.workers.dev';
+    let baseDados = null;
+    let historicoConversa = [];
+
+    function renderizarMarkdown(texto) {
+      let html = texto
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+      html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+      const linhas = html.split('\n');
+      let emLista = false;
+      const saida = [];
+
+      for (const linha of linhas) {
+        const trim = linha.trim();
+        if (/^[-*•]\s+/.test(trim)) {
+          if (!emLista) {
+            saida.push('<ul>');
+            emLista = true;
+          }
+          saida.push('<li>' + trim.replace(/^[-*•]\s+/, '') + '</li>');
+        } else {
+          if (emLista) {
+            saida.push('</ul>');
+            emLista = false;
+          }
+          if (trim) {
+            saida.push('<p>' + trim + '</p>');
+          }
+        }
+      }
+      if (emLista) saida.push('</ul>');
+      return saida.join('');
+    }
+
+    async function carregarDados() {
+      const c1 = document.getElementById('card1');
+      const c2 = document.getElementById('card2');
+      const dataBadge = document.getElementById('dataAtualizacao');
+
+      try {
+        const resp = await fetch('dados_ia.json?t=' + Date.now());
+        if (!resp.ok) throw new Error('Falha ao carregar dados_ia.json (' + resp.status + ')');
+
+        baseDados = await resp.json();
+
+        if (c1) c1.textContent = baseDados.cards?.c1 || 'Base carregada.';
+        if (c2) c2.textContent = baseDados.cards?.c2 || 'Pronto para análise.';
+        if (dataBadge && baseDados.atualizado_em) {
+          dataBadge.textContent = baseDados.atualizado_em.split(' ')[0];
+        }
+
+        document.getElementById('pergunta').disabled = false;
+        document.getElementById('btnEnviar').disabled = false;
+        document.querySelectorAll('.suggestion-btn').forEach(b => b.disabled = false);
+      } catch (err) {
+        if (c1) c1.textContent = 'Erro ao carregar base: ' + err.message;
+        if (c2) c2.textContent = 'Verifique se dados_ia.json existe no repositório.';
+      }
+    }
 
     function selecionarContextoInteligente(pergunta) {
       if (!baseDados) return '{}';
@@ -262,7 +324,6 @@
 
       if (pedeTempo || (!pedeProduto && !pedeRegiao && !pedeCliente)) {
         pacote.por_ano = baseDados.ano;
-        // Envia todos os 36 meses (2024, 2025 e 2026) com receita_formatada e variações pré-calculadas
         pacote.serie_mensal_completa = baseDados.mes;
 
         const anoMatch = q.match(/\b(2024|2025|2026)\b/);
@@ -281,7 +342,7 @@
         pacote.estados_por_mes = baseDados.reg_mes || baseDados.reg_3m || [];
       }
 
-      const citados = baseDados.cli.filter(c => q.includes(c.cliente.toLowerCase()));
+      const citados = (baseDados.cli || []).filter(c => q.includes(c.cliente.toLowerCase()));
 
       if (pedeCliente || citados.length > 0) {
         const top12 = baseDados.cli.slice(0, 12);
@@ -379,6 +440,26 @@ Regras de comportamento e estilo:
         input.focus();
       }
     }
+
+    function usarSugestao(texto) {
+      const input = document.getElementById('pergunta');
+      input.value = texto;
+      enviar();
+    }
+
+    function resetarChat() {
+      historicoConversa = [];
+      document.querySelectorAll('.dinamico').forEach(el => el.remove());
+    }
+
+    document.getElementById('pergunta').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        enviar();
+      }
+    });
+
+    carregarDados();
   </script>
 </body>
 </html>
