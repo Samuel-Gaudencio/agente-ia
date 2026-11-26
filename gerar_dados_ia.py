@@ -40,14 +40,14 @@ df['VENDA'] = pd.to_numeric(df['VENDA TOTAL'], errors='coerce').fillna(0.0)
 df['CUSTO'] = pd.to_numeric(df['CUSTO TOTAL'], errors='coerce').fillna(0.0)
 df['QTD'] = pd.to_numeric(df['QTD'], errors='coerce').fillna(0).astype(int)
 
-# No UNFORMATTED_VALUE, datas do Google Sheets vêm como serial numérico (dias desde 30/12/1899) ou string
+# Prioriza o padrão brasileiro (dayfirst=True) para datas em texto e serial numérico do Sheets
 def parse_data_sheets(val):
     if isinstance(val, (int, float)):
         return pd.to_datetime(val, unit='D', origin='1899-12-30')
     s = str(val).strip()
-    dt = pd.to_datetime(s, format='%m/%d/%Y', errors='coerce')
+    dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
     if pd.isna(dt):
-        dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
+        dt = pd.to_datetime(s, format='%m/%d/%Y', errors='coerce')
     return dt
 
 df['DT'] = df['DATA'].apply(parse_data_sheets)
@@ -96,9 +96,17 @@ por_ano['custo_formatado'] = por_ano['custo'].apply(brl)
 por_ano['lucro_formatado'] = por_ano['lucro'].apply(brl)
 
 por_cat = agregar(df, ['CATEGORIA']).rename(columns={'CATEGORIA': 'categoria'}).sort_values('receita', ascending=False)
+por_cat['receita_formatada'] = por_cat['receita'].apply(brl)
+por_cat['lucro_formatado'] = por_cat['lucro'].apply(brl)
+
 por_prod = agregar(df, ['PRODUTO', 'CATEGORIA']).rename(columns={'PRODUTO': 'produto', 'CATEGORIA': 'categoria'}).sort_values('receita', ascending=False).reset_index(drop=True)
 por_prod['diferenca_margem_media_pp'] = (por_prod['margem_pct'] - mg_geral).round(2)
+por_prod['receita_formatada'] = por_prod['receita'].apply(brl)
+por_prod['lucro_formatado'] = por_prod['lucro'].apply(brl)
+
 por_reg = agregar(df, ['REGIÃO']).rename(columns={'REGIÃO': 'estado'}).sort_values('receita', ascending=False)
+por_reg['receita_formatada'] = por_reg['receita'].apply(brl)
+por_reg['lucro_formatado'] = por_reg['lucro'].apply(brl)
 
 meses_ord = sorted(df['MES_ORD'].dropna().unique())
 m_atual_3 = meses_ord[-3:]
@@ -108,24 +116,31 @@ cli_geral = agregar(df, ['CLIENTE']).rename(columns={'CLIENTE': 'cliente'}).sort
 cli_rec = df[df['MES_ORD'].isin(m_atual_3)].groupby('CLIENTE')['VENDA'].sum()
 cli_ant = df[df['MES_ORD'].isin(m_ant_3)].groupby('CLIENTE')['VENDA'].sum()
 
+cli_geral['receita_formatada'] = cli_geral['receita'].apply(brl)
 cli_geral['receita_ultimos_3_meses'] = cli_geral['cliente'].map(cli_rec).fillna(0).round(2)
 cli_geral['receita_3_meses_anteriores'] = cli_geral['cliente'].map(cli_ant).fillna(0).round(2)
 cli_geral['crescimento_ultimos_3_meses'] = (cli_geral['receita_ultimos_3_meses'] - cli_geral['receita_3_meses_anteriores']).round(2)
 
-# Detalhamento mensal completo (todos os anos)
+# Detalhamento mensal completo (todos os anos) com valores já formatados e sem custo para evitar troca de coluna
 cat_mes = agregar(df, ['MES_ORD', 'CATEGORIA']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
 cat_mes['periodo'] = cat_mes['MES_ORD'].apply(mes_extenso)
-cat_mes = cat_mes.rename(columns={'CATEGORIA': 'categoria'}).drop(columns=['MES_ORD'])
+cat_mes['receita_formatada'] = cat_mes['receita'].apply(brl)
+cat_mes['lucro_formatado'] = cat_mes['lucro'].apply(brl)
+cat_mes = cat_mes.rename(columns={'CATEGORIA': 'categoria'}).drop(columns=['MES_ORD', 'custo', 'receita', 'lucro'])
 
 reg_mes = agregar(df, ['MES_ORD', 'REGIÃO']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
 reg_mes['periodo'] = reg_mes['MES_ORD'].apply(mes_extenso)
-reg_mes = reg_mes.rename(columns={'REGIÃO': 'estado'}).drop(columns=['MES_ORD'])
+reg_mes['receita_formatada'] = reg_mes['receita'].apply(brl)
+reg_mes['lucro_formatado'] = reg_mes['lucro'].apply(brl)
+reg_mes = reg_mes.rename(columns={'REGIÃO': 'estado'}).drop(columns=['MES_ORD', 'custo', 'receita', 'lucro'])
 
 # Top 5 produtos por mês (para explicar o "porquê" de qualquer pico ou queda mensal)
 prod_mes = agregar(df, ['MES_ORD', 'PRODUTO']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
 prod_mes = prod_mes.groupby('MES_ORD').head(5).copy()
 prod_mes['periodo'] = prod_mes['MES_ORD'].apply(mes_extenso)
-prod_mes = prod_mes.rename(columns={'PRODUTO': 'produto'}).drop(columns=['MES_ORD'])
+prod_mes['receita_formatada'] = prod_mes['receita'].apply(brl)
+prod_mes['lucro_formatado'] = prod_mes['lucro'].apply(brl)
+prod_mes = prod_mes.rename(columns={'PRODUTO': 'produto'}).drop(columns=['MES_ORD', 'custo', 'receita', 'lucro'])
 
 piores_prod = por_prod[por_prod['receita'] > (rec_total * 0.02)].sort_values('margem_pct')
 pior = piores_prod.iloc[0] if not piores_prod.empty else por_prod.sort_values('margem_pct').iloc[0]
