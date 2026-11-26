@@ -368,6 +368,16 @@
     async function consultarAgente(pergunta) {
       if (!baseDados) throw new Error('Aguarde o carregamento da base de dados.');
 
+      // Cache atrelado à versão atual do dados_ia.json (zera automaticamente quando a base atualiza)
+      const chaveCache = `bi_cache_${baseDados.atualizado_em || 'v1'}_${pergunta.trim().toLowerCase()}`;
+      const respostaEmCache = localStorage.getItem(chaveCache);
+
+      if (respostaEmCache) {
+        historicoConversa.push({ role: 'user', parts: [{ text: pergunta }] });
+        historicoConversa.push({ role: 'model', parts: [{ text: respostaEmCache }] });
+        return respostaEmCache;
+      }
+
       const contextoEnxuto = selecionarContextoInteligente(pergunta);
 
       const instrucaoSistema = `Você é o copiloto estratégico de vendas integrado a este dashboard executivo. Converse de forma natural, analítica e direta com o gestor — como um especialista da equipe sentado ao lado dele.
@@ -380,7 +390,8 @@ Regras de comportamento e estilo:
 5. Use exclusivamente os números do JSON. A margem média geral da empresa é **${baseDados.geral.margem_media_geral_pct}%** e o mês mais recente da base é **${baseDados.geral.ultimo_mes_disponivel}**.
 6. Ao citar valores monetários grandes, use exatamente os campos formatados já prontos no JSON (como \`receita_formatada\`, \`custo_formatado\` e \`lucro_formatado\`) e os percentuais de variação pré-calculados — nunca arredonde milhões de cabeça e nunca misture valores de anos diferentes.`;
 
-      const janelaHistorico = historicoConversa.slice(-6);
+      // Mantém apenas as últimas 2 mensagens do histórico para economizar tokens por requisição
+      const janelaHistorico = historicoConversa.slice(-2);
       const contents = [
         ...janelaHistorico,
         {
@@ -402,6 +413,12 @@ Regras de comportamento e estilo:
 
       if (!resp.ok || data.error) {
         throw new Error(data.error?.message || 'Erro de comunicação com o servidor de IA.');
+      }
+
+      try {
+        localStorage.setItem(chaveCache, data.texto);
+      } catch (e) {
+        // Ignora se o storage do navegador estiver cheio
       }
 
       historicoConversa.push({ role: 'user', parts: [{ text: pergunta }] });
