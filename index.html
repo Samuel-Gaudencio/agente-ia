@@ -324,8 +324,8 @@
       const mesEncontrado = mesesNomes.find(m => q.includes(m));
       const mesNormalizado = mesEncontrado === 'marco' ? 'março' : mesEncontrado;
 
-      const anoMatch = q.match(/\b(2024|2025|2026)\b/);
-      const anoAlvo = anoMatch ? anoMatch[1] : baseDados.geral.ultimo_mes_disponivel.split('/')[1];
+      const anoMatch = q.match(/\b(20)?(24|25|26)\b/);
+      const anoAlvo = anoMatch ? '20' + anoMatch[2] : baseDados.geral.ultimo_mes_disponivel.split('/')[1];
 
       const pacote = {
         geral: {
@@ -342,28 +342,29 @@
         }))
       };
 
-      const pedeTempo = /mês|mes|mensal|ano|anual|evolu|cresc|queda|tend|hist|resum|últim|ultim|2024|2025|2026/.test(q) || !!mesNormalizado;
+      const pedeTempo = /mês|mes|mensal|ano|anual|evolu|cresc|queda|tend|hist|resum|últim|ultim|2024|2025|2026|\b24\b|\b25\b|\b26\b/.test(q) || !!mesNormalizado;
       const pedeProduto = /prod|margem|lucro|custo|rentab|preju|perco|pior|melhor|suplement|grão|grao|óleo|oleo|creatina|whey/.test(q);
       const pedeRegiao = /regi|estado|uf|rj|sp|mg|es|sudeste|rio|paulo|minas|espírito|espirito/.test(q);
       const pedeCliente = /client|comprador|conta|top|carteira|reten|churn/.test(q);
 
       if (pedeTempo || (!pedeProduto && !pedeRegiao && !pedeCliente)) {
         if (mesNormalizado) {
-          // Filtra apenas o mês específico pedido (ex: novembro/2026) e o mês anterior para comparação
+          // Inclui o mês pedido em todos os anos (para comparações YoY como "dezembro de 25") + mês anterior do ano alvo
           const idx = baseDados.mes.findIndex(m => m.periodo === `${mesNormalizado}/${anoAlvo}`);
-          const janelaMeses = idx >= 0
-            ? baseDados.mes.slice(Math.max(0, idx - 1), idx + 1)
-            : baseDados.mes.filter(m => m.periodo.endsWith('/' + anoAlvo));
+          const mesAnterior = idx > 0 ? [baseDados.mes[idx - 1]] : [];
+          const mesmoMesOutrosAnos = baseDados.mes.filter(m => m.periodo.startsWith(mesNormalizado + '/'));
 
-          pacote.meses = janelaMeses;
+          const mapaMeses = new Map();
+          [...mesAnterior, ...mesmoMesOutrosAnos].forEach(m => mapaMeses.set(m.periodo, m));
+          pacote.meses = Array.from(mapaMeses.values());
+
           pacote.categorias_no_mes = (baseDados.cat_mes || [])
-            .filter(item => item.periodo === `${mesNormalizado}/${anoAlvo}`)
-            .map(i => ({ cat: i.categoria, ped: i.pedidos, rec: i.receita_formatada, luc: i.lucro_formatado, mg: i.margem_pct }));
+            .filter(item => item.periodo.startsWith(mesNormalizado + '/'))
+            .map(i => ({ per: i.periodo, cat: i.categoria, ped: i.pedidos, rec: i.receita_formatada, luc: i.lucro_formatado, mg: i.margem_pct }));
           pacote.top_produtos_no_mes = (baseDados.prod_mes || [])
             .filter(item => item.periodo === `${mesNormalizado}/${anoAlvo}`)
             .map(i => ({ prod: i.produto, ped: i.pedidos, rec: i.receita_formatada, mg: i.margem_pct }));
         } else {
-          // Envia os meses do ano alvo (máx. 12 meses) de forma compacta
           pacote.meses_do_ano = baseDados.mes
             .filter(m => m.periodo.endsWith('/' + anoAlvo))
             .map(m => ({
@@ -424,7 +425,6 @@
     async function consultarAgente(pergunta) {
       if (!baseDados) throw new Error('Aguarde o carregamento da base de dados.');
 
-      // Cache atrelado à versão atual do dados_ia.json (zera automaticamente quando a base atualiza)
       const chaveCache = `bi_cache_${baseDados.atualizado_em || 'v1'}_${pergunta.trim().toLowerCase()}`;
       const respostaEmCache = localStorage.getItem(chaveCache);
 
@@ -446,7 +446,6 @@ Regras de comportamento e estilo:
 5. Use exclusivamente os números do JSON. A margem média geral da empresa é **${baseDados.geral.margem_media_geral_pct}%** e o mês mais recente da base é **${baseDados.geral.ultimo_mes_disponivel}**.
 6. Ao citar valores monetários grandes, use exatamente os campos formatados já prontos no JSON (como \`receita_formatada\`, \`custo_formatado\` e \`lucro_formatado\`) e os percentuais de variação pré-calculados — nunca arredonde milhões de cabeça e nunca misture valores de anos diferentes.`;
 
-      // Mantém apenas as últimas 2 mensagens do histórico para economizar tokens por requisição
       const janelaHistorico = historicoConversa.slice(-2);
       const contents = [
         ...janelaHistorico,
@@ -479,9 +478,7 @@ Regras de comportamento e estilo:
 
       try {
         localStorage.setItem(chaveCache, data.texto);
-      } catch (e) {
-        // Ignora se o storage do navegador estiver cheio
-      }
+      } catch (e) {}
 
       historicoConversa.push({ role: 'user', parts: [{ text: pergunta }] });
       historicoConversa.push({ role: 'model', parts: [{ text: data.texto }] });
