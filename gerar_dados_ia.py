@@ -14,6 +14,9 @@ MESES_PT = {
     9: 'setembro', 10: 'outubro', 11: 'novembro', 12: 'dezembro'
 }
 
+def brl(v):
+    return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
 def mes_extenso(periodo_str):
     ano, mes = periodo_str.split('-')
     return f"{MESES_PT[int(mes)]}/{ano}"
@@ -41,12 +44,16 @@ df['QTD'] = pd.to_numeric(df['QTD'], errors='coerce').fillna(0).astype(int)
 def parse_data_sheets(val):
     if isinstance(val, (int, float)):
         return pd.to_datetime(val, unit='D', origin='1899-12-30')
-    dt = pd.to_datetime(str(val), dayfirst=True, errors='coerce')
+    s = str(val).strip()
+    dt = pd.to_datetime(s, format='%m/%d/%Y', errors='coerce')
     if pd.isna(dt):
-        dt = pd.to_datetime(str(val), format='%m/%d/%Y', errors='coerce')
+        dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
     return dt
 
 df['DT'] = df['DATA'].apply(parse_data_sheets)
+df = df[df['ID PEDIDO'].astype(str).str.strip() != ''].copy()
+df = df[df['DT'].notna()].copy()
+
 df['ANO'] = df['DT'].dt.year.astype(str)
 df['MES_ORD'] = df['DT'].dt.to_period('M').astype(str)
 
@@ -87,6 +94,7 @@ por_ano['variacao_margem_ano_anterior_pp'] = por_ano['margem_pct'].diff().round(
 por_ano['receita_formatada'] = por_ano['receita'].apply(brl)
 por_ano['custo_formatado'] = por_ano['custo'].apply(brl)
 por_ano['lucro_formatado'] = por_ano['lucro'].apply(brl)
+
 por_cat = agregar(df, ['CATEGORIA']).rename(columns={'CATEGORIA': 'categoria'}).sort_values('receita', ascending=False)
 por_prod = agregar(df, ['PRODUTO', 'CATEGORIA']).rename(columns={'PRODUTO': 'produto', 'CATEGORIA': 'categoria'}).sort_values('receita', ascending=False).reset_index(drop=True)
 por_prod['diferenca_margem_media_pp'] = (por_prod['margem_pct'] - mg_geral).round(2)
@@ -113,7 +121,7 @@ reg_mes = agregar(df, ['MES_ORD', 'REGIÃO']).sort_values(['MES_ORD', 'receita']
 reg_mes['periodo'] = reg_mes['MES_ORD'].apply(mes_extenso)
 reg_mes = reg_mes.rename(columns={'REGIÃO': 'estado'}).drop(columns=['MES_ORD'])
 
-# Top 3 produtos por mês (para explicar o "porquê" de qualquer pico ou queda mensal)
+# Top 5 produtos por mês (para explicar o "porquê" de qualquer pico ou queda mensal)
 prod_mes = agregar(df, ['MES_ORD', 'PRODUTO']).sort_values(['MES_ORD', 'receita'], ascending=[True, False])
 prod_mes = prod_mes.groupby('MES_ORD').head(5).copy()
 prod_mes['periodo'] = prod_mes['MES_ORD'].apply(mes_extenso)
@@ -123,9 +131,6 @@ piores_prod = por_prod[por_prod['receita'] > (rec_total * 0.02)].sort_values('ma
 pior = piores_prod.iloc[0] if not piores_prod.empty else por_prod.sort_values('margem_pct').iloc[0]
 rank_pior = int(pior.name) + 1
 lider_cat = por_cat.iloc[0]
-
-def brl(v):
-    return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 insight_1 = (
     f"{pior['produto']} é o {rank_pior}º em receita ({brl(pior['receita'])}), "
