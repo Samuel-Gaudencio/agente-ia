@@ -1,0 +1,38 @@
+name: Atualizar Base do Agente BI
+
+on:
+  schedule:
+    # Roda de segunda a sexta, a cada 2 horas em horário comercial (08h às 18h Brasília / 11h às 21h UTC)
+    - cron: '0 11,13,15,17,19,21 * * 1-5'
+  workflow_dispatch: # Habilita o botão "Run workflow" para rodar manualmente quando quiser
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Gerar dados_ia.json a partir do Google Sheets
+        env:
+          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+        run: python gerar_dados_ia.py
+
+      - name: Commitar e publicar dados_ia.json
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add dados_ia.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "chore: atualiza dados_ia.json" && git push)
