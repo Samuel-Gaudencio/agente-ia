@@ -41,16 +41,20 @@ df['CUSTO'] = pd.to_numeric(df['CUSTO TOTAL'], errors='coerce').fillna(0.0)
 df['QTD'] = pd.to_numeric(df['QTD'], errors='coerce').fillna(0).astype(int)
 
 # Prioriza o padrão brasileiro (dayfirst=True) para datas em texto e serial numérico do Sheets
-def parse_data_sheets(val):
+def parse_data_iso(val):
     if isinstance(val, (int, float)):
         return pd.to_datetime(val, unit='D', origin='1899-12-30')
     s = str(val).strip()
-    dt = pd.to_datetime(s, dayfirst=True, errors='coerce')
-    if pd.isna(dt):
-        dt = pd.to_datetime(s, format='%m/%d/%Y', errors='coerce')
-    return dt
+    if not s:
+        return pd.NaT
+    # Se vier no formato ISO (AAAA-MM-DD), lê direto sem ambiguidade
+    if len(s) >= 10 and s[4] == '-':
+        return pd.to_datetime(s[:10], format='%Y-%m-%d', errors='coerce')
+    # Caso venha formatado como DD/MM/AAAA
+    return pd.to_datetime(s, dayfirst=True, errors='coerce')
 
-df['DT'] = df['DATA'].apply(parse_data_sheets)
+col_data = 'DATA ISO' if 'DATA ISO' in df.columns else 'DATA'
+df['DT'] = df[col_data].apply(parse_data_iso)
 df = df[df['ID PEDIDO'].astype(str).str.strip() != ''].copy()
 df = df[df['DT'].notna()].copy()
 
